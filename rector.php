@@ -28,6 +28,8 @@ return RectorConfig::configure()
     )
     ->withImportNames(removeUnusedImports: true)
     ->withSkip([
+        // Deliberately broken fixtures: the generator must report them.
+        __DIR__ . '/tests/Fixtures/Model/Broken.php',
         NewlineAfterStatementRector::class,
         CatchExceptionNameMatchingTypeRector::class,
     ])

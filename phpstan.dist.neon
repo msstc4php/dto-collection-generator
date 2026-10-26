@@ -12,6 +12,10 @@ parameters:
     paths:
         - src/
         - tests/
+    # Deliberately broken fixtures: the generator must report them, PHPStan cannot analyse them.
+    excludePaths:
+        analyseAndScan:
+            - tests/Fixtures/Model/Broken.php
     disallowedFunctionCalls:
         -
             function:
