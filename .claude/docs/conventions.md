@@ -13,3 +13,7 @@
   are excluded from PHPStan, Rector, CS-Fixer and the 8.1 lint where needed.
 - Public API: `DtoCollectionGenerator`, `Application\Generate\*`, `Domain\Diagnostic\*`;
   everything else is `@internal` (`PublicApiTest`).
+- **An intersection is emitted as `ElementType::ofClass(A::class)->andInstanceOf(B::class)`**,
+  not `ElementType::intersection(A::class, B::class)`: the latter is PHPDoc-typed
+  `ElementType<object>` and would need a `@phpstan-ignore` in every generated class. Hence
+  dto-collection `^1.1`.

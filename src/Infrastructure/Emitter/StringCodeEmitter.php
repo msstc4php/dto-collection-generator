@@ -298,7 +298,7 @@ final class StringCodeEmitter implements CodeEmitter
                     default => $branch,
                 });
             }
-            // ElementType::intersection() is typed ElementType<object>; the andInstanceOf() chain is typed A&B&...
+            // intersection() is typed ElementType<object>; the andInstanceOf() chain keeps A&B for PHPStan.
             $expression = sprintf('%s::ofClass(%s::class)', $name(ElementType::class), $name(array_shift($branch)));
             foreach ($branch as $class) {
                 $expression .= sprintf('->andInstanceOf(%s::class)', $name($class));

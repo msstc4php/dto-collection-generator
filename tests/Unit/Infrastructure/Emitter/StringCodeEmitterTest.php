@@ -34,9 +34,12 @@ final class StringCodeEmitterTest extends TestCase
         self::assertStringNotContainsString('@phpstan-ignore', $code);
     }
 
-    public function testOtherElementTypesHaveNoIgnore(): void
+    public function testIntersectionInsideAUnionIsTypedExactly(): void
     {
-        self::assertStringNotContainsString('@phpstan-ignore', $this->emit('App\Collection\SomeList', ElementType::union(ElementType::ofClass(Item::class), ElementType::integer())->nullable()));
+        $code = $this->emit('App\\Collection\\SomeList', ElementType::union(ElementType::intersection(Animal::class, Equatable::class), ElementType::ofClass(Item::class))->nullable());
+
+        self::assertStringContainsString('return self::$type ??= ElementType::union(ElementType::ofClass(Animal::class)->andInstanceOf(Equatable::class), ElementType::ofClass(Item::class))->nullable();' . "\n", $code);
+        self::assertStringNotContainsString('@phpstan-ignore', $code);
     }
 
     public function testEveryEquatableBranchGetsAComparator(): void
