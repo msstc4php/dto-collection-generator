@@ -32,6 +32,7 @@ return RectorConfig::configure()
         __DIR__ . '/tests/Fixtures/Model/Broken.php',
         __DIR__ . '/tests/Fixtures/Projects/Scan/Syntax.php',
         __DIR__ . '/tests/Fixtures/Projects/Scan/Unloadable.php',
+        __DIR__ . '/tests/Targets',
         NewlineAfterStatementRector::class,
         CatchExceptionNameMatchingTypeRector::class,
     ])

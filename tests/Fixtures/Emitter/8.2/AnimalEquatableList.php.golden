@@ -11,26 +11,28 @@ use MSSTC4PHP\DtoCollection\Behaviour\MutableListBehaviour;
 use MSSTC4PHP\DtoCollection\ElementType;
 use MSSTC4PHP\DtoCollection\Equality\Equality;
 use MSSTC4PHP\DtoCollection\Equality\StrictEquality;
+use MSSTC4PHP\DtoCollection\Equatable;
 use MSSTC4PHP\DtoCollection\MutableList;
 use MSSTC4PHP\DtoCollection\TypedList;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Animal;
 use NoDiscard;
 
 /**
- * @implements MutableList<\Countable&\Traversable>
- * @implements TypedList<\Countable&\Traversable>
+ * @implements MutableList<Animal&Equatable>
+ * @implements TypedList<Animal&Equatable>
  */
-final class CountableTraversableList implements MutableList, TypedList
+final class AnimalEquatableList implements MutableList, TypedList
 {
-    /** @use MutableListBehaviour<\Countable&\Traversable> */
+    /** @use MutableListBehaviour<Animal&Equatable> */
     use MutableListBehaviour;
 
-    /** @var ElementType<\Countable&\Traversable>|null */
+    /** @var ElementType<Animal&Equatable>|null */
     private static ?ElementType $type = null;
 
     private static ?Equality $sameness = null;
 
     /**
-     * @param array<\Countable&\Traversable> $elements
+     * @param array<Animal&Equatable> $elements
      */
     #[NoDiscard]
     public static function fromArray(array $elements): static
@@ -39,7 +41,7 @@ final class CountableTraversableList implements MutableList, TypedList
     }
 
     /**
-     * @param iterable<\Countable&\Traversable> $elements
+     * @param iterable<Animal&Equatable> $elements
      */
     #[NoDiscard]
     public static function fromIterable(iterable $elements): static
@@ -54,177 +56,177 @@ final class CountableTraversableList implements MutableList, TypedList
     }
 
     #[NoDiscard]
-    public static function of(\Countable&\Traversable ...$elements): static
+    public static function of(Animal&Equatable ...$elements): static
     {
         return new self($elements);
     }
 
     #[NoDiscard]
-    public function first(): (\Countable&\Traversable)|null
+    public function first(): (Animal&Equatable)|null
     {
         return $this->doFirst();
     }
 
     #[NoDiscard]
-    public function last(): (\Countable&\Traversable)|null
+    public function last(): (Animal&Equatable)|null
     {
         return $this->doLast();
     }
 
     #[NoDiscard]
-    public function firstOrFail(): \Countable&\Traversable
+    public function firstOrFail(): Animal&Equatable
     {
         return $this->doFirstOrFail();
     }
 
     #[NoDiscard]
-    public function lastOrFail(): \Countable&\Traversable
+    public function lastOrFail(): Animal&Equatable
     {
         return $this->doLastOrFail();
     }
 
     #[NoDiscard]
-    public function get(int $index): (\Countable&\Traversable)|null
+    public function get(int $index): (Animal&Equatable)|null
     {
         return $this->doGet($index);
     }
 
     #[NoDiscard]
-    public function getOrFail(int $index): \Countable&\Traversable
+    public function getOrFail(int $index): Animal&Equatable
     {
         return $this->doGetOrFail($index);
     }
 
     #[NoDiscard]
-    public function at(int $position): (\Countable&\Traversable)|null
+    public function at(int $position): (Animal&Equatable)|null
     {
         return $this->doAt($position);
     }
 
     #[NoDiscard]
-    public function single(): \Countable&\Traversable
+    public function single(): Animal&Equatable
     {
         return $this->doSingle();
     }
 
     #[NoDiscard]
-    public function singleOrNull(): (\Countable&\Traversable)|null
+    public function singleOrNull(): (Animal&Equatable)|null
     {
         return $this->doSingleOrNull();
     }
 
     #[NoDiscard]
-    public function random(): (\Countable&\Traversable)|null
+    public function random(): (Animal&Equatable)|null
     {
         return $this->doRandom();
     }
 
     /**
-     * @param Closure(\Countable&\Traversable, int): bool $predicate
+     * @param Closure(Animal&Equatable, int): bool $predicate
      */
     #[NoDiscard]
-    public function find(Closure $predicate): (\Countable&\Traversable)|null
+    public function find(Closure $predicate): (Animal&Equatable)|null
     {
         return $this->doFind($predicate);
     }
 
     /**
-     * @param Closure(\Countable&\Traversable, int): bool $predicate
+     * @param Closure(Animal&Equatable, int): bool $predicate
      */
     #[NoDiscard]
-    public function findLast(Closure $predicate): (\Countable&\Traversable)|null
+    public function findLast(Closure $predicate): (Animal&Equatable)|null
     {
         return $this->doFindLast($predicate);
     }
 
     /**
-     * @param Closure(\Countable&\Traversable): mixed $selector
+     * @param Closure(Animal&Equatable): mixed $selector
      */
     #[NoDiscard]
-    public function minBy(Closure $selector): (\Countable&\Traversable)|null
+    public function minBy(Closure $selector): (Animal&Equatable)|null
     {
         return $this->doMinBy($selector);
     }
 
     /**
-     * @param Closure(\Countable&\Traversable): mixed $selector
+     * @param Closure(Animal&Equatable): mixed $selector
      */
     #[NoDiscard]
-    public function maxBy(Closure $selector): (\Countable&\Traversable)|null
+    public function maxBy(Closure $selector): (Animal&Equatable)|null
     {
         return $this->doMaxBy($selector);
     }
 
     #[NoDiscard]
-    public function contains(\Countable&\Traversable $element): bool
+    public function contains(Animal&Equatable $element): bool
     {
         return $this->doContains($element);
     }
 
     #[NoDiscard]
-    public function containsAll(\Countable&\Traversable ...$elements): bool
+    public function containsAll(Animal&Equatable ...$elements): bool
     {
         return $this->doContainsAll(...$elements);
     }
 
     #[NoDiscard]
-    public function containsAny(\Countable&\Traversable ...$elements): bool
+    public function containsAny(Animal&Equatable ...$elements): bool
     {
         return $this->doContainsAny(...$elements);
     }
 
     #[NoDiscard]
-    public function positionOf(\Countable&\Traversable $element): ?int
+    public function positionOf(Animal&Equatable $element): ?int
     {
         return $this->doPositionOf($element);
     }
 
-    public function push(\Countable&\Traversable ...$elements): void
+    public function push(Animal&Equatable ...$elements): void
     {
         $this->doPush(...$elements);
     }
 
-    public function unshift(\Countable&\Traversable ...$elements): void
+    public function unshift(Animal&Equatable ...$elements): void
     {
         $this->doUnshift(...$elements);
     }
 
-    public function set(int $index, \Countable&\Traversable $element): void
+    public function set(int $index, Animal&Equatable $element): void
     {
         $this->doSetAt($index, $element);
     }
 
-    public function insertAt(int $index, \Countable&\Traversable $element): void
+    public function insertAt(int $index, Animal&Equatable $element): void
     {
         $this->doInsertAt($index, $element);
     }
 
-    public function removeElement(\Countable&\Traversable $element): bool
+    public function removeElement(Animal&Equatable $element): bool
     {
         return $this->doRemoveElement($element);
     }
 
-    public function remove(int $index): (\Countable&\Traversable)|null
+    public function remove(int $index): (Animal&Equatable)|null
     {
         return $this->doRemoveAt($index);
     }
 
-    public function pop(): (\Countable&\Traversable)|null
+    public function pop(): (Animal&Equatable)|null
     {
         return $this->doPop();
     }
 
-    public function shift(): (\Countable&\Traversable)|null
+    public function shift(): (Animal&Equatable)|null
     {
         return $this->doShift();
     }
 
     /**
-     * @return ElementType<\Countable&\Traversable>
+     * @return ElementType<Animal&Equatable>
      */
     protected function elementType(): ElementType
     {
-        return self::$type ??= ElementType::intersection(\Countable::class, \Traversable::class);
+        return self::$type ??= ElementType::intersection(Animal::class, Equatable::class); // @phpstan-ignore return.type, assign.propertyType (ElementType::intersection() is typed ElementType<object>: PHPDoc cannot name the intersection of variadic class-strings)
     }
 
     protected function equality(): Equality

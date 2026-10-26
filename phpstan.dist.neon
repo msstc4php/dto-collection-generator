@@ -17,6 +17,8 @@ parameters:
         analyseAndScan:
             - tests/Fixtures/Model/Broken.php
             - tests/Fixtures/Projects/Scan/
+            # They load the golden files, which PHPStan analyses on their own in make test-targets.
+            - tests/Targets/
     disallowedFunctionCalls:
         -
             function:

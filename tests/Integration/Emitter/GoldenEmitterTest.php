@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Integration\Emitter;
 
-use Countable;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
+use MSSTC4PHP\DtoCollection\Equatable;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
@@ -14,6 +14,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Emitter\StringCodeEmitter;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Reflection\ReflectionClassInspector;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Animal;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Cat;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Closure;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Dog;
@@ -22,7 +23,6 @@ use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Pet;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Tag;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Traversable;
 
 /**
  * Golden files: tests/Fixtures/Emitter/<php>/<class>.php.golden. UPDATE_SNAPSHOTS=1 rewrites them; review the diff.
@@ -98,7 +98,7 @@ final class GoldenEmitterTest extends TestCase
             self::spec('ClosureHolderList', Variant::Immutable, ElementType::ofClass(Closure::class)),
         ];
         if ($php !== '8.1') {
-            $specs[] = self::spec('CountableTraversableList', Variant::Mutable, ElementType::intersection(Countable::class, Traversable::class));
+            $specs[] = self::spec('AnimalEquatableList', Variant::Mutable, ElementType::intersection(Animal::class, Equatable::class));
         }
 
         return $specs;

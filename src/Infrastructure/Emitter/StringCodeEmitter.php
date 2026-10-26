@@ -41,6 +41,8 @@ final class StringCodeEmitter implements CodeEmitter
 {
     private const INDENT = '    ';
 
+    private const INTERSECTION_IGNORE = '// @phpstan-ignore return.type, assign.propertyType (ElementType::intersection() is typed ElementType<object>: PHPDoc cannot name the intersection of variadic class-strings)';
+
     public function emit(CollectionSpec $spec, TargetProfile $target, ClassFacts $facts): string
     {
         $shape = TypeShape::of($spec->elementType);
@@ -124,7 +126,7 @@ final class StringCodeEmitter implements CodeEmitter
         $lines[] = self::INDENT . ' */';
         $lines[] = self::INDENT . sprintf('protected function elementType(): %s', $name(ElementType::class));
         $lines[] = self::INDENT . '{';
-        $lines[] = self::INDENT . self::INDENT . sprintf('return self::$type ??= %s;', $this->elementTypeExpression($shape, $name));
+        $lines[] = self::INDENT . self::INDENT . sprintf('return self::$type ??= %s;', $this->elementTypeExpression($shape, $name)) . ($shape->hasIntersection() ? ' ' . self::INTERSECTION_IGNORE : '');
         $lines[] = self::INDENT . '}';
         $lines[] = '';
         $lines[] = self::INDENT . sprintf('protected function equality(): %s', $name(Equality::class));
