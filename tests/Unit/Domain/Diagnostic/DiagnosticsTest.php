@@ -70,5 +70,7 @@ final class DiagnosticsTest extends TestCase
             Location::inConfig('/project/dto-collection-generator.yaml', '/collections/0/class')->render('/project'),
         );
         self::assertSame('dto-collection-generator.yaml', Location::inConfig('/project/dto-collection-generator.yaml', '')->render('/project'));
+        self::assertSame('/project/src/Item.php:3', Location::inFile('/project/src/Item.php', 3)->absolute());
+        self::assertSame('/project/a.yaml#/version', Location::inConfig('/project/a.yaml', '/version')->absolute());
     }
 }

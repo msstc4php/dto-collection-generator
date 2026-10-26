@@ -15,6 +15,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
+use Throwable;
 
 final class ConfigFactory
 {
@@ -140,6 +141,11 @@ final class ConfigFactory
             return null;
         } catch (InvalidArgument $exception) {
             $section->report($exception->getMessage());
+
+            return null;
+        } catch (Throwable $exception) {
+            // Autoloading a broken class file throws an Error, not an InvalidElementType.
+            $section->report('Cannot load the element type: ' . $exception->getMessage(), 'elementType');
 
             return null;
         }

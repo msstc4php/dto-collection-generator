@@ -10,6 +10,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Config\ConfigFactory;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Config\GeneratorConfig;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostic;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostics;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Broken;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Item;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Pet;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -96,6 +97,7 @@ final class ConfigFactoryTest extends TestCase
         yield 'nullable not a bool' => [['version' => 1, 'collections' => [self::collection(['nullable' => 'yes'])]], 'error #/collections/0/nullable: "nullable" must be true or false.'];
         yield 'bad class name' => [['version' => 1, 'collections' => [self::collection(['class' => 'App\List'])]], 'error #/collections/0/class: "App\List" cannot name a class: "List" is a reserved word'];
         yield 'bad element type' => [['version' => 1, 'collections' => [self::collection(['elementType' => 'App\Missing'])]], 'error #/collections/0/elementType: Invalid element type "App\Missing": class or interface "App\Missing" does not exist'];
+        yield 'unloadable element class' => [['version' => 1, 'collections' => [self::collection(['elementType' => Broken::class])]], 'error #/collections/0/elementType: Cannot load the element type: Class "MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\MissingParent" not found'];
         yield 'nullable odm' => [['version' => 1, 'collections' => [self::collection(['variant' => 'odm', 'elementType' => Pet::class, 'nullable' => true])]], 'error #/collections/0: App\IntegerList: Doctrine ODM does not store null elements, so an ODM collection cannot be nullable'];
         yield 'paths not an object' => [['version' => 1, 'paths' => ['src']], 'error #/paths: "paths" must be an object.'];
         yield 'path prefix without separator' => [['version' => 1, 'paths' => ['App' => 'src']], 'error #/paths/App: A namespace prefix ends with "\"; write "App\".'];

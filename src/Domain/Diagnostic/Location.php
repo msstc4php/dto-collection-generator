@@ -29,7 +29,20 @@ final class Location
     public function render(string $relativeTo): string
     {
         $prefix = rtrim($relativeTo, '/') . '/';
-        $path = str_starts_with($this->path, $prefix) ? substr($this->path, strlen($prefix)) : $this->path;
+
+        return $this->format(str_starts_with($this->path, $prefix) ? substr($this->path, strlen($prefix)) : $this->path);
+    }
+
+    /**
+     * With the absolute path, for messages that point at another location.
+     */
+    public function absolute(): string
+    {
+        return $this->format($this->path);
+    }
+
+    private function format(string $path): string
+    {
         if ($this->line !== null) {
             return $path . ':' . $this->line;
         }
