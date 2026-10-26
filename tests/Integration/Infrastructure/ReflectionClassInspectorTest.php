@@ -14,6 +14,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Colour;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Dog;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Item;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Labelled;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\NeverLoaded;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Pet;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Tag;
 use PHPUnit\Framework\TestCase;
@@ -54,6 +55,16 @@ final class ReflectionClassInspectorTest extends TestCase
         self::assertTrue($inspector->hasOdmMapping(Pet::class));
         self::assertFalse($inspector->hasOdmMapping(Tag::class));
         self::assertFalse($inspector->hasOdmMapping('Nope\Missing'));
+    }
+
+    public function testLocatesWithoutLoading(): void
+    {
+        $inspector = new ReflectionClassInspector();
+        $class = NeverLoaded::class;
+
+        self::assertSame(dirname(__DIR__, 2) . '/Fixtures/Model/NeverLoaded.php', realpath((string) $inspector->locate($class)));
+        self::assertFalse(class_exists($class, false));
+        self::assertNull($inspector->locate('Nope\Missing'));
     }
 
     public function testFiles(): void

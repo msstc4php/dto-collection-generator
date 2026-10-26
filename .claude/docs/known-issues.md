@@ -22,8 +22,13 @@
 - **Loading the previous output can be fatal**: a generated class for an older dto-collection may fail
   to link (missing abstract method) — uncatchable. The validator skips the "already exists" check when
   the target file starts with our header, so such a class is never loaded.
-- **Case-only renames on macOS/Windows**: the stale scan skips a manifest path that is the same inode as a
-  generated path differing only in case (tested with a hard link on Linux).
+- **Case-only renames on macOS/Windows**: the stale scan skips any manifest entry whose inode is a file written in
+  this run (covers Unicode case folding and symlinked spellings; tested with hard links on Linux). The file may keep
+  its old spelling on disk — documented (`git mv`), not fixed.
+- **The manifest is compared byte for byte** with what `writeManifest` would write (CRLF ignored), so an old
+  absolute or reordered manifest is "outdated" once and rewritten.
+- **Abandoned warnings only for `.php` files inside the config directory**: other stale entries of an untrusted
+  manifest are dropped silently, so a planted manifest cannot point the user at an arbitrary file.
 - **Manifest paths are relative to the config, with `../`** (`Path::relative()`); absolute only across
   drives or UNC shares.
 - **No `tempnam()` for the atomic write**: it creates files with mode 0600, which the rename keeps.

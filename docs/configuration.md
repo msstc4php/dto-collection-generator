@@ -71,7 +71,9 @@ Errors stop the run before anything is written:
 - a collection in the global namespace (the file could not import the classes it uses).
 
 A collection whose target file this generator wrote earlier is not loaded for the "already
-exists" check: an output for an older dto-collection may no longer load.
+exists" check, since an output for an older dto-collection may no longer load. Composer's autoloader
+is asked instead where it would find the class: another file there (a classmap entry, another PSR-4
+root) is an error.
 
 An ODM element class without an ODM document attribute is a warning: it may be mapped in XML.
 
@@ -86,7 +88,10 @@ An ODM element class without an ODM document attribute is a warning: it may be m
   is a conflict) or no longer starts with the generated header (then it is left alone with a
   warning).
 - Renaming a collection only in letter case (`ItemList` → `Itemlist`) keeps the file on a
-  case-insensitive file system instead of deleting the class just written.
+  case-insensitive file system (macOS, Windows) instead of deleting the class just written. The
+  file may keep its old spelling there, and git with `core.ignorecase` does not see the rename:
+  run `git mv src/Collection/ItemList.php src/Collection/Itemlist.php`, or a case-sensitive
+  system (CI on Linux) will not find the class.
 - Writes are atomic. Line endings do not count as a change.
 
 ## Command line
@@ -103,6 +108,9 @@ vendor/bin/dto-collection-generator generate [--config=FILE] [--check] [--dry-ru
 | 3 | configuration or usage error |
 
 `--format=json` prints `{status, diagnostics: [{severity, location, message}], changes: [{kind, path}]}`.
+`kind` is `create`, `update`, `delete`, `conflict` or `abandoned` (a stale file left alone because it
+no longer starts with the generated header); the manifest is listed last when it changes.
+`status` is `ok`, `out-of-date`, `generation-failed` or `config-failed`.
 
 From PHP:
 

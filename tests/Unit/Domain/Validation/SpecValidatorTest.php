@@ -142,13 +142,34 @@ final class SpecValidatorTest extends TestCase
             {
                 return $this->inner->fileOf($class);
             }
+
+            public function locate(string $class): ?string
+            {
+                return $this->inner->locate($class);
+            }
         };
         $spec = self::spec('App\Stale', ElementType::ofClass(Item::class));
         $diagnostics = new Diagnostics();
 
         // An earlier output may no longer load against a newer dto-collection: a fatal error PHP cannot catch.
-        self::assertSame([$spec], (new SpecValidator())->validate([$spec], self::target('8.1'), $facts, $diagnostics, static fn (): bool => false, static fn (ClassName $class): bool => $class->fullName() === 'App\Stale'));
+        self::assertSame([$spec], (new SpecValidator())->validate([$spec], self::target('8.1'), $facts, $diagnostics, static fn (): bool => false, static fn (ClassName $class): ?string => $class->fullName() === 'App\Stale' ? '/project/src/Stale.php' : null));
         self::assertNotContains('App\Stale', $asked->getArrayCopy());
+    }
+
+    public function testOurOutputDeclaredByHandElsewhere(): void
+    {
+        $facts = new InMemoryClassInspector([
+            Item::class => ['kind' => ClassKind::OrdinaryClass],
+            'App\Stale' => ['kind' => ClassKind::OrdinaryClass, 'located' => '/project/vendor/composer/../../legacy/Stale.php'],
+            'App\Fresh' => ['kind' => ClassKind::OrdinaryClass, 'located' => '/project/vendor/composer/../../src/Fresh.php'],
+        ]);
+        $specs = [$this->spec('App\Stale', ElementType::ofClass(Item::class), line: 1), $this->spec('App\Fresh', ElementType::ofClass(Item::class), line: 2)];
+        $diagnostics = new Diagnostics();
+
+        $valid = (new SpecValidator())->validate($specs, $this->target('8.1'), $facts, $diagnostics, static fn (): bool => false, static fn (ClassName $class): string => '/project/src/' . $class->shortName() . '.php');
+
+        self::assertSame([$specs[1]], $valid);
+        self::assertSame(['error 1: App\Stale is also declared in /project/legacy/Stale.php, which the autoloader would load instead of the generated /project/src/Stale.php; remove one of them'], $this->messages($diagnostics));
     }
 
     public function testCollectionNeedsANamespace(): void
@@ -235,7 +256,7 @@ final class SpecValidatorTest extends TestCase
         $facts = new InMemoryClassInspector([Pet::class => ['kind' => ClassKind::OrdinaryClass, 'odm' => true]], odmInstalled: false);
         $diagnostics = new Diagnostics();
 
-        self::assertSame([], (new SpecValidator())->validate([$this->spec('App\PetCollection', ElementType::ofClass(Pet::class), Variant::Odm, marked: Pet::class)], $this->target('8.1'), $facts, $diagnostics, static fn (): bool => true, static fn (): bool => false));
+        self::assertSame([], (new SpecValidator())->validate([$this->spec('App\PetCollection', ElementType::ofClass(Pet::class), Variant::Odm, marked: Pet::class)], $this->target('8.1'), $facts, $diagnostics, static fn (): bool => true, static fn (): ?string => null));
         self::assertSame(['error 1: App\PetCollection: the ODM variant needs doctrine/mongodb-odm, which is not installed'], $this->messages($diagnostics));
     }
 
@@ -265,7 +286,7 @@ final class SpecValidatorTest extends TestCase
             $this->facts,
             $diagnostics,
             $isGenerated ?? static fn (string $file): bool => $file === '/project/src/Generated.php',
-            static fn (ClassName $class): bool => $class->fullName() === 'App\Stale',
+            static fn (ClassName $class): ?string => $class->fullName() === 'App\Stale' ? '/project/src/Stale.php' : null,
         );
     }
 

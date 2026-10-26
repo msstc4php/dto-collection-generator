@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Reflection;
 
+use Composer\Autoload\ClassLoader;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Mapping\Annotations\AbstractDocument;
 use MSSTC4PHP\DtoCollection\Equatable;
@@ -62,6 +63,18 @@ final class ReflectionClassInspector implements ClassInspector
         $file = $this->reflect($class)?->getFileName();
 
         return $file === false ? null : $file;
+    }
+
+    public function locate(string $class): ?string
+    {
+        foreach (ClassLoader::getRegisteredLoaders() as $loader) {
+            $file = $loader->findFile($class);
+            if (is_string($file)) {
+                return $file;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -100,10 +100,10 @@ final class Generate
             $this->inspector,
             $diagnostics,
             $this->writer->isGenerated(...),
-            function (ClassName $class) use ($config): bool {
+            function (ClassName $class) use ($config): ?string {
                 $path = $this->layout->pathFor($class, $config);
 
-                return $path !== null && $this->writer->isGenerated($path);
+                return $path !== null && $this->writer->isGenerated($path) ? $path : null;
             },
         );
         if ($diagnostics->hasErrors()) {

@@ -77,7 +77,8 @@ final class Path
     /**
      * The path of $to as seen from the directory $from, with "../" where needed.
      *
-     * @return string|null null when they share no root: another drive, another UNC share, or only one of them relative
+     * @return string|null null when they share no root (another drive, another UNC share, only one of them relative) or a
+     *                     relative one climbs above its start
      */
     public static function relative(string $from, string $to): ?string
     {
@@ -87,9 +88,12 @@ final class Path
         if ($root !== self::root($to)) {
             return null;
         }
-        // Normalised paths hold no ".", ".." or empty segments below their root.
         $fromSegments = self::below($root, $from);
         $toSegments = self::below($root, $to);
+        // Normalisation keeps the leading ".." of a relative path; what lies above it is unknown.
+        if (in_array('..', [...$fromSegments, ...$toSegments], true)) {
+            return null;
+        }
         $common = 0;
         while (isset($fromSegments[$common], $toSegments[$common]) && $fromSegments[$common] === $toSegments[$common]) {
             $common++;
@@ -119,7 +123,8 @@ final class Path
      */
     private static function below(string $root, string $normalized): array
     {
-        $rest = substr($normalized, strlen($root));
+        // A UNC root comes without its trailing slash.
+        $rest = ltrim(substr($normalized, strlen($root)), '/');
 
         return $rest === '' ? [] : explode('/', $rest);
     }

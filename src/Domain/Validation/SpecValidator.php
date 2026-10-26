@@ -8,6 +8,7 @@ use Closure;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostics;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Model\TypeShape;
+use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
@@ -25,13 +26,13 @@ final class SpecValidator
     /**
      * @param list<CollectionSpec> $specs
      * @param Closure(string $file): bool $isGeneratedFile whether an existing class file was written by this generator
-     * @param Closure(ClassName $class): bool $isGeneratedClass whether the collection's own target file is one we wrote:
-     *                                                          then it is not loaded, as an output for an older
-     *                                                          dto-collection may end in a fatal error PHP cannot catch
+     * @param Closure(ClassName $class): ?string $ownTarget the collection's target file when we wrote it: then the class
+     *                                                      is located, not loaded, as an output for an older
+     *                                                      dto-collection may end in a fatal error PHP cannot catch
      *
      * @return list<CollectionSpec> the specs without errors
      */
-    public function validate(array $specs, TargetProfile $target, ClassFacts $facts, Diagnostics $diagnostics, Closure $isGeneratedFile, Closure $isGeneratedClass): array
+    public function validate(array $specs, TargetProfile $target, ClassFacts $facts, Diagnostics $diagnostics, Closure $isGeneratedFile, Closure $ownTarget): array
     {
         $valid = [];
         $taken = [];
@@ -49,8 +50,11 @@ final class SpecValidator
                 $problems->error(sprintf('%s: a collection needs a namespace; a file without one cannot import the classes it uses', $spec->class->fullName()), $spec->origin);
             } elseif (!$this->isNamedLikeItsElement($spec, $problems)) {
                 $taken[$spec->class->key()] = $spec;
-                if (!$isGeneratedClass($spec->class)) {
+                $ownFile = $ownTarget($spec->class);
+                if ($ownFile === null) {
                     $this->checkExisting($spec, $facts, $problems, $isGeneratedFile);
+                } else {
+                    $this->checkDeclaredElsewhere($spec, $ownFile, $facts, $problems);
                 }
             }
             $this->checkElementType($spec, $target, $facts, $problems);
@@ -74,6 +78,19 @@ final class SpecValidator
         }
 
         return false;
+    }
+
+    private function checkDeclaredElsewhere(CollectionSpec $spec, string $target, ClassFacts $facts, Diagnostics $problems): void
+    {
+        $located = $facts->locate($spec->class->fullName());
+        if ($located !== null && Path::normalize($located) !== Path::normalize($target)) {
+            $problems->error(sprintf(
+                '%s is also declared in %s, which the autoloader would load instead of the generated %s; remove one of them',
+                $spec->class->fullName(),
+                Path::normalize($located),
+                $target,
+            ), $spec->origin);
+        }
     }
 
     /**

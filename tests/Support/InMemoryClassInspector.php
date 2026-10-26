@@ -8,7 +8,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Port\ClassInspector;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
 
 /**
- * @phpstan-type ClassShape array{kind: ClassKind, parents?: list<string>, equatable?: bool, odm?: bool, file?: string}
+ * @phpstan-type ClassShape array{kind: ClassKind, parents?: list<string>, equatable?: bool, odm?: bool, file?: string, located?: string}
  */
 final class InMemoryClassInspector implements ClassInspector
 {
@@ -60,6 +60,11 @@ final class InMemoryClassInspector implements ClassInspector
     public function fileOf(string $class): ?string
     {
         return $this->find($class)['file'] ?? null;
+    }
+
+    public function locate(string $class): ?string
+    {
+        return $this->find($class)['located'] ?? null;
     }
 
     /**

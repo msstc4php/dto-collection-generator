@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Infrastructure\Emitter;
 
+use LogicException;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
 use MSSTC4PHP\DtoCollection\Equatable;
@@ -47,6 +48,14 @@ final class StringCodeEmitterTest extends TestCase
             . '->with(Cat::class, static fn (Cat $left, Cat $right): bool => $left->equals($right));',
             $code,
         );
+    }
+
+    public function testAGlobalCollectionIsALogicError(): void
+    {
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('ItemList: a collection needs a namespace; the validator rejects it');
+
+        $this->emit('ItemList', ElementType::ofClass(Item::class));
     }
 
     public function testCollectionNamedLikeAFixedImport(): void

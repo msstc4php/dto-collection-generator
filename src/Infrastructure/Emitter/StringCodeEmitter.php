@@ -7,6 +7,7 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Emitter;
 use Closure;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Selectable;
+use LogicException;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\Behaviour\ImmutableListBehaviour;
 use MSSTC4PHP\DtoCollection\Behaviour\MutableListBehaviour;
@@ -112,6 +113,9 @@ final class StringCodeEmitter implements CodeEmitter
      */
     private function fileHeader(CollectionSpec $spec, ImportTable $imports): array
     {
+        if ($spec->class->namespace() === '') {
+            throw new LogicException(sprintf('%s: a collection needs a namespace; the validator rejects it', $spec->class->fullName()));
+        }
         $lines = ['<?php', '', self::HEADER, '', 'declare(strict_types=1);', '', 'namespace ' . $spec->class->namespace() . ';', ''];
         foreach ($imports->imports() as $import) {
             $lines[] = 'use ' . $import . ';';

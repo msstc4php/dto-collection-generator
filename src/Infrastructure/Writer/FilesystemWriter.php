@@ -47,18 +47,24 @@ final class FilesystemWriter implements FileWriter
         }
 
         $old = $this->readManifest($manifestPath);
+        // Files written in this run, by inode: on a case-insensitive file system, renaming App\ItemList to App\Itemlist
+        // rewrites the very file the old entry names (as does any other spelling of it, such as a symlinked
+        // directory), and deleting that entry would delete the class.
+        $written = array_map(fn (GeneratedFile $file): ?int => $this->inode($file->path), $files);
+        $directory = Path::directory($manifestPath);
         // $old is sorted by path, so the deletions come in a stable order.
         foreach ($old as $path => $hash) {
             $current = is_file($path) ? file_get_contents($path) : false;
-            // Generated in this run under this path or, on a case-insensitive file system, under another case of it
-            // (renaming App\ItemList to App\Itemlist rewrites this very file, and deleting it would delete the class).
-            $generated = $paths[strtolower($path)] ?? null;
-            if ($current === false || ($generated !== null && @fileinode($generated) === fileinode($path))) {
+            $inode = $this->inode($path);
+            if ($current === false || ($inode !== null && in_array($inode, $written, true))) {
                 continue;
             }
-            // The manifest is a file in the project, so it is not trusted: only our own generated files are deleted.
-            if (!str_ends_with($path, '.php') || preg_match(self::GENERATED, $current) !== 1) {
-                $changes[] = new FileChange(ChangeKind::Abandoned, $path, 'it was generated earlier and its spec is gone, but it no longer starts with the generated header; delete it yourself');
+            // The manifest is a file in the project, so it is not trusted: only our own generated files are deleted,
+            // and only a PHP file inside the project earns a warning; other entries are dropped without a word.
+            if (preg_match(self::GENERATED, $current) !== 1 || !str_ends_with($path, '.php')) {
+                if (str_ends_with($path, '.php') && Path::within($directory, $path) !== null) {
+                    $changes[] = new FileChange(ChangeKind::Abandoned, $path, 'it was generated earlier and its spec is gone, but it no longer starts with the generated header, so it was left alone');
+                }
 
                 continue;
             }
@@ -67,7 +73,9 @@ final class FilesystemWriter implements FileWriter
                 : new FileChange(ChangeKind::Conflict, $path, 'its spec is gone, but it was edited after generation; delete it yourself');
         }
 
-        return new WritePlan($changes, $old !== $this->hashes($files));
+        $manifest = is_file($manifestPath) ? file_get_contents($manifestPath) : false;
+
+        return new WritePlan($changes, $manifest === false || $this->normalized($manifest) !== $this->encodeManifest($manifestPath, $this->hashes($files)));
     }
 
     public function apply(WritePlan $plan, string $manifestPath, array $files): void
@@ -125,7 +133,6 @@ final class FilesystemWriter implements FileWriter
         foreach ($files as $file) {
             $hashes[$file->path] = hash('sha256', $this->normalized($file->contents));
         }
-        ksort($hashes);
 
         return $hashes;
     }
@@ -167,16 +174,32 @@ final class FilesystemWriter implements FileWriter
      */
     private function writeManifest(string $manifestPath, array $hashes): void
     {
+        $this->write($manifestPath, $this->encodeManifest($manifestPath, $hashes));
+    }
+
+    /**
+     * @param array<string, string> $hashes
+     */
+    private function encodeManifest(string $manifestPath, array $hashes): string
+    {
         $directory = Path::directory($manifestPath);
         $relative = [];
         foreach ($hashes as $path => $hash) {
             $relative[Path::relative($directory, $path) ?? $path] = $hash;
         }
         ksort($relative, SORT_STRING);
-        $this->write($manifestPath, json_encode(
+
+        return json_encode(
             ['generator' => self::GENERATOR, 'files' => (object) $relative],
             JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR,
-        ) . "\n");
+        ) . "\n";
+    }
+
+    private function inode(string $path): ?int
+    {
+        $inode = @fileinode($path);
+
+        return $inode === false ? null : $inode;
     }
 
     private function write(string $path, string $contents): void

@@ -33,4 +33,9 @@ interface ClassFacts
      * @return string|null null for internal classes and classes that do not exist
      */
     public function fileOf(string $class): ?string;
+
+    /**
+     * The file the autoloader would load for the class, found without loading it.
+     */
+    public function locate(string $class): ?string;
 }

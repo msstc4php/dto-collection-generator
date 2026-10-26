@@ -128,6 +128,7 @@ final class PathTest extends TestCase
         yield 'from below the root' => ['/a', '/b.php', '../b.php'];
         yield 'similar prefix' => ['/project', '/projectile/A.php', '../projectile/A.php'];
         yield 'other drive' => ['C:/project', 'D:/src/A.php', null];
+        yield 'from the drive root' => ['C:/', 'C:/a.php', 'a.php'];
         yield 'same drive' => ['C:/project/config', 'C:/project/src/A.php', '../src/A.php'];
         yield 'unc share' => ['//server/share/project', '//server/share/src/A.php', '../src/A.php'];
         yield 'other unc share' => ['//server/share/project', '//server/other/A.php', null];
@@ -135,6 +136,10 @@ final class PathTest extends TestCase
         yield 'nested relative and absolute' => ['project/config', '/src/A.php', null];
         yield 'both relative' => ['project/config', 'project/src/A.php', '../src/A.php'];
         yield 'parent' => ['/a/b', '/a', '..'];
+        yield 'from the unc share itself' => ['//server/share', '//server/share/b/c.php', 'b/c.php'];
+        yield 'up to the unc share' => ['//server/share/a', '//server/share', '..'];
+        yield 'relative from above' => ['../x', 'y', null];
+        yield 'relative to above' => ['x', '../y', null];
     }
 
     #[DataProvider('relatives')]

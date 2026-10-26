@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Integration\Infrastructure;
 
 use LogicException;
-use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\ChangeKind;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\FileChange;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
@@ -79,6 +78,19 @@ final class FilesystemWriterTest extends TestCase
         self::assertSame([['update', 'src/Itemlist.php']], $this->changes($plan));
         $writer->apply($plan, $this->manifest, $new);
         self::assertStringEqualsFile($this->directory->path . '/src/Itemlist.php', self::HEADER . 'two');
+    }
+
+    public function testRenameToAnotherSpellingOfTheSameFileKeepsIt(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/ÄList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        // APFS and NTFS fold Unicode case, and a symlinked directory gives a file a second spelling too.
+        link($this->directory->path . '/src/ÄList.php', $this->directory->path . '/src/äList.php');
+        $new = [$this->file('src/äList.php', 'two')];
+
+        $plan = $writer->plan($this->manifest, $new);
+        self::assertSame([['update', 'src/äList.php']], $this->changes($plan));
     }
 
     public function testRenameThatOnlyChangesCaseOnACaseSensitiveFileSystem(): void
@@ -172,6 +184,19 @@ final class FilesystemWriterTest extends TestCase
         self::assertFalse($plan->isUpToDate());
     }
 
+    public function testDeletionsComeInPathOrder(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/A.php', 'a'), $this->file('src/B.php', 'b')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        file_put_contents($this->manifest, json_encode(['files' => [
+            'src/B.php' => hash('sha256', self::HEADER . 'b'),
+            'src/A.php' => hash('sha256', self::HEADER . 'a'),
+        ]], JSON_THROW_ON_ERROR));
+
+        self::assertSame([['delete', 'src/A.php'], ['delete', 'src/B.php']], $this->changes($writer->plan($this->manifest, [])));
+    }
+
     public function testEveryStaleFileIsLookedAt(): void
     {
         $writer = new FilesystemWriter();
@@ -244,7 +269,9 @@ final class FilesystemWriterTest extends TestCase
 
         try {
             $plan = $writer->plan($this->manifest, []);
-            self::assertSame([ChangeKind::Abandoned, ChangeKind::Abandoned, ChangeKind::Abandoned], array_map(static fn (FileChange $change): ChangeKind => $change->kind, $plan->changes));
+            // Only the PHP file inside the project is worth a warning; the others are dropped without a word, so a
+            // planted manifest cannot point the user at an arbitrary file.
+            self::assertSame([['abandoned', 'src/HandWritten.php']], $this->changes($plan));
             $writer->apply($plan, $this->manifest, []);
             foreach ($victims as $victim) {
                 self::assertFileExists($victim);
@@ -264,7 +291,7 @@ final class FilesystemWriterTest extends TestCase
 
         $plan = $writer->plan($this->manifest, []);
         self::assertSame([['abandoned', 'src/A.php'], ['delete', 'src/B.php']], $this->changes($plan));
-        self::assertSame('it was generated earlier and its spec is gone, but it no longer starts with the generated header; delete it yourself', $plan->changes[0]->reason);
+        self::assertSame('it was generated earlier and its spec is gone, but it no longer starts with the generated header, so it was left alone', $plan->changes[0]->reason);
         $writer->apply($plan, $this->manifest, []);
         self::assertFileExists($this->directory->path . '/src/A.php');
         self::assertTrue($writer->plan($this->manifest, [])->isUpToDate());
@@ -304,10 +331,10 @@ final class FilesystemWriterTest extends TestCase
     {
         file_put_contents($this->manifest, '{"generator": "msstc4php/dto-collection-generator"}');
 
-        self::assertFalse((new FilesystemWriter())->plan($this->manifest, [])->manifestOutdated);
+        self::assertSame([], (new FilesystemWriter())->plan($this->manifest, [])->changes);
     }
 
-    public function testManifestOrderDoesNotMatter(): void
+    public function testAManifestThatWouldBeWrittenDifferentlyIsOutdated(): void
     {
         $writer = new FilesystemWriter();
         $files = [$this->file('src/A.php', 'a'), $this->file('src/B.php', 'b')];
@@ -317,6 +344,12 @@ final class FilesystemWriterTest extends TestCase
             'src/A.php' => hash('sha256', self::HEADER . 'a'),
         ]], JSON_THROW_ON_ERROR));
 
+        // Same files and hashes, other bytes: an absolute path written by an older run must become relative.
+        self::assertFalse($writer->plan($this->manifest, $files)->isUpToDate());
+        $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+        self::assertTrue($writer->plan($this->manifest, $files)->isUpToDate());
+
+        file_put_contents($this->manifest, str_replace("\n", "\r\n", (string) file_get_contents($this->manifest)));
         self::assertTrue($writer->plan($this->manifest, $files)->isUpToDate());
     }
 
