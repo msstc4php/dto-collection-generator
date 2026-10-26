@@ -12,6 +12,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 
 /**
  * One collection class to generate, from an attribute on a DTO or from the config file.
+ *
+ * @internal
  */
 final class CollectionSpec
 {

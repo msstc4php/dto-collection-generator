@@ -10,6 +10,8 @@ use MSSTC4PHP\DtoCollection\ElementType;
 /**
  * An element type as the pieces the emitted code prints: native hints for T and ?T, and their PHPDoc forms.
  * Class names go through a printer callback, so the emitter decides between an import and a qualified name.
+ *
+ * @internal
  */
 final class TypeShape
 {

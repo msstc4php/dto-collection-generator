@@ -10,6 +10,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 /**
  * Typed, located reads from one decoded config object. A wrong value becomes a diagnostic and the default is
  * used, so every mistake in the file is reported in one run.
+ *
+ * @internal
  */
 final class RawSection
 {

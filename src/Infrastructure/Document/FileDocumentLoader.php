@@ -10,6 +10,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Port\DocumentNotLoaded;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
+/**
+ * @internal
+ */
 final class FileDocumentLoader implements DocumentLoader
 {
     public function load(string $path): array

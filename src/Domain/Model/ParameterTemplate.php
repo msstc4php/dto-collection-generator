@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Domain\Model;
 
+/**
+ * @internal
+ */
 final class ParameterTemplate
 {
     /**

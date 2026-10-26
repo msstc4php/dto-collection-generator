@@ -9,6 +9,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Port\PhpRequirement;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\ProjectPhpConstraint;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
 
+/**
+ * @internal
+ */
 final class ComposerJsonPhpConstraint implements ProjectPhpConstraint
 {
     public function find(string $directory): PhpRequirement

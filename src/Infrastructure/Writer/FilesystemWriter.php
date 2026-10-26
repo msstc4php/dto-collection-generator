@@ -17,6 +17,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
 /**
  * Writes generated files atomically and remembers them in a manifest, so a file whose spec is gone can be deleted
  * when nobody edited it. A file without the generated header is never overwritten.
+ *
+ * @internal
  */
 final class FilesystemWriter implements FileWriter
 {

@@ -11,6 +11,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpConstraint;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
 
+/**
+ * @internal
+ */
 final class TargetResolver
 {
     public function __construct(private readonly ProjectPhpConstraint $constraints)

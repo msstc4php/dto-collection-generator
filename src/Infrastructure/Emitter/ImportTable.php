@@ -9,6 +9,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 /**
  * Decides how the emitted file refers to each class: by an imported or same-namespace short name, or fully
  * qualified when a short name would be ambiguous.
+ *
+ * @internal
  */
 final class ImportTable
 {

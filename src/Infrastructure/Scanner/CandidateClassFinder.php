@@ -17,6 +17,8 @@ use PhpParser\ParserFactory;
  * Finds the class-likes of a file that carry #[TypedCollection], without loading the file: only those get loaded.
  *
  * @phpstan-type Candidate array{class: string, lines: list<int>}
+ *
+ * @internal
  */
 final class CandidateClassFinder
 {

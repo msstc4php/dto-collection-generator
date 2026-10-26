@@ -7,6 +7,9 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Config\GeneratorConfig;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 
+/**
+ * @internal
+ */
 interface ProjectLayout
 {
     /**

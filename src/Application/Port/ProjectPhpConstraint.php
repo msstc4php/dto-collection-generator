@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 
+/**
+ * @internal
+ */
 interface ProjectPhpConstraint
 {
     /**

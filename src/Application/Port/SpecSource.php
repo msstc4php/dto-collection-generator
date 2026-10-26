@@ -7,6 +7,9 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostics;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 
+/**
+ * @internal
+ */
 interface SpecSource
 {
     /**

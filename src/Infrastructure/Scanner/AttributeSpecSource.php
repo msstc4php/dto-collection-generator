@@ -23,6 +23,8 @@ use Throwable;
  * PHP itself evaluates the arguments and the attribute's constructor checks them.
  *
  * @phpstan-import-type Candidate from CandidateClassFinder
+ *
+ * @internal
  */
 final class AttributeSpecSource implements SpecSource
 {

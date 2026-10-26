@@ -13,6 +13,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 /**
  * Places a class by the config's `paths`, then by the PSR-4 maps of the nearest composer.json; the longest
  * matching prefix wins, as in Composer's autoloader.
+ *
+ * @internal
  */
 final class ComposerProjectLayout implements ProjectLayout
 {

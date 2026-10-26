@@ -8,6 +8,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Exception\InvalidClassName;
 
 /**
  * A fully qualified class name that a generated class can be declared with.
+ *
+ * @internal
  */
 final class ClassName
 {

@@ -1,0 +1,7 @@
+version: 1
+sources:
+  - Dto
+collections:
+  - class: Demo\Collection\IntegerList
+    variant: immutable
+    elementType: int

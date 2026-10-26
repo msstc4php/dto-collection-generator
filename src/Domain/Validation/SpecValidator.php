@@ -16,6 +16,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
 /**
  * Rejects the specs that would not give a working class, before anything is written (spec §7). Missing classes and
  * traits never get here: ElementType refuses them when the spec is built.
+ *
+ * @internal
  */
 final class SpecValidator
 {

@@ -6,6 +6,9 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 
 use RuntimeException;
 
+/**
+ * @internal
+ */
 final class WriteFailed extends RuntimeException
 {
 }

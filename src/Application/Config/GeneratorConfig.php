@@ -8,6 +8,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
 
+/**
+ * @internal
+ */
 final class GeneratorConfig
 {
     /**

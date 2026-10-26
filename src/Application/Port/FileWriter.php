@@ -7,6 +7,9 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
 
+/**
+ * @internal
+ */
 interface FileWriter
 {
     /**

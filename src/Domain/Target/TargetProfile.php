@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Domain\Target;
 
+/**
+ * @internal
+ */
 final class TargetProfile
 {
     public function __construct(public readonly PhpVersion $php)

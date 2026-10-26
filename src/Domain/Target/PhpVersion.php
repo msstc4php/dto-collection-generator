@@ -9,6 +9,8 @@ use Stringable;
 
 /**
  * A target PHP minor version. Below 8.1 dto-collection does not run.
+ *
+ * @internal
  */
 final class PhpVersion implements Stringable
 {

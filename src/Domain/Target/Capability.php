@@ -6,6 +6,8 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Domain\Target;
 
 /**
  * A language feature the emitted code uses only when the target version has it.
+ *
+ * @internal
  */
 enum Capability: string
 {

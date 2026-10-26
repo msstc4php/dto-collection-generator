@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Composer's bin proxy names the project's autoloader, even for a symlinked package; installed as a dependency, it
+// sits three levels up otherwise; in this repository, next to bin/.
+$candidates = [$GLOBALS['_composer_autoload_path'] ?? null, __DIR__ . '/../../../autoload.php', __DIR__ . '/../vendor/autoload.php'];
+foreach ($candidates as $autoload) {
+    if (is_string($autoload) && is_file($autoload)) {
+        require $autoload;
+
+        exit(MSSTC4PHP\DtoCollectionGenerator\DtoCollectionGenerator::run());
+    }
+}
+
+fwrite(STDERR, "dto-collection-generator: run composer install first.\n");
+exit(2);

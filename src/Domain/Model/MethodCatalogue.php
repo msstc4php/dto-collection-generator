@@ -9,6 +9,8 @@ use MSSTC4PHP\DtoCollection\Attribute\Variant;
 /**
  * The typed public methods of each variant, in the order of dto-collection's reference classes
  * (docs/writing-a-typed-collection.md is the contract).
+ *
+ * @internal
  */
 final class MethodCatalogue
 {

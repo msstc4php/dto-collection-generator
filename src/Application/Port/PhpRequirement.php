@@ -6,6 +6,8 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Application\Port;
 
 /**
  * What the nearest composer.json says about PHP: a constraint, nothing, or why the file could not be used.
+ *
+ * @internal
  */
 final class PhpRequirement
 {

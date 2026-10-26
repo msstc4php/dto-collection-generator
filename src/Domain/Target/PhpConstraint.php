@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Domain\Target;
 
+/**
+ * @internal
+ */
 final class PhpConstraint
 {
     private function __construct()

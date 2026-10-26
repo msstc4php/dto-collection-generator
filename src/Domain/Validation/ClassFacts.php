@@ -8,6 +8,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
 
 /**
  * What the generator needs to know about the classes a spec names.
+ *
+ * @internal
  */
 interface ClassFacts
 {

@@ -8,6 +8,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\ClassFacts;
 
+/**
+ * @internal
+ */
 interface CodeEmitter
 {
     /**

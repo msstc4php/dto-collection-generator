@@ -13,6 +13,9 @@ use ReflectionAttribute;
 use ReflectionClass;
 use Throwable;
 
+/**
+ * @internal
+ */
 final class ReflectionClassInspector implements ClassInspector
 {
     public function kind(string $class): ?ClassKind

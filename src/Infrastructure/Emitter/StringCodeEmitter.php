@@ -34,6 +34,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\ClassFacts;
 /**
  * Renders the class shape of dto-collection's docs/writing-a-typed-collection.md, laid out like its reference
  * classes (PER coding style).
+ *
+ * @internal
  */
 final class StringCodeEmitter implements CodeEmitter
 {

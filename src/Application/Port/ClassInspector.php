@@ -8,6 +8,8 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\ClassFacts;
 
 /**
  * Answers about the project's classes; the adapter loads them through the project's autoloader.
+ *
+ * @internal
  */
 interface ClassInspector extends ClassFacts
 {

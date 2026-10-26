@@ -17,6 +17,9 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
 use Throwable;
 
+/**
+ * @internal
+ */
 final class ConfigFactory
 {
     private const NAMESPACE_PREFIX = '/^(?:[A-Za-z_\x80-\xff][A-Za-z0-9_\x80-\xff]*\\\\)+$/';

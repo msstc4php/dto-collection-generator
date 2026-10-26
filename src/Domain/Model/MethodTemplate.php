@@ -6,6 +6,8 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Domain\Model;
 
 /**
  * One public method of a generated collection, with the element type left as T.
+ *
+ * @internal
  */
 final class MethodTemplate
 {
