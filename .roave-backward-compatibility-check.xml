@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!-- The public API is DtoCollectionGenerator, Application\Generate\* and Domain\Diagnostic\*; everything else is @internal. -->
+<roave-bc-check
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="tools/vendor/roave/backward-compatibility-check/Resources/schema.xsd">
+    <baseline>
+        <ignored-regex>#MSSTC4PHP\\DtoCollectionGenerator\\(?!DtoCollectionGenerator\b|Application\\Generate\\|Domain\\Diagnostic\\)#</ignored-regex>
+    </baseline>
+</roave-bc-check>
