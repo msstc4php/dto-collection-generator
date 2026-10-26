@@ -10,7 +10,7 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Presentation\Cli;
  * Status and severity carry the values of the Status and Severity enums.
  *
  * @phpstan-type DiagnosticShape array{severity: string, location: string, message: string}
- * @phpstan-type ChangeShape array{kind: 'create'|'update'|'delete'|'unchanged'|'conflict', path: string}
+ * @phpstan-type ChangeShape array{kind: 'create'|'update'|'delete'|'unchanged'|'conflict'|'abandoned', path: string}
  * @phpstan-type ReportShape array{status: string, diagnostics: list<DiagnosticShape>, changes: list<ChangeShape>}
  *
  * @internal

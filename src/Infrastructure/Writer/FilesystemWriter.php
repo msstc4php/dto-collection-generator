@@ -47,12 +47,19 @@ final class FilesystemWriter implements FileWriter
         }
 
         $old = $this->readManifest($manifestPath);
-        $generated = array_flip(array_map(static fn (GeneratedFile $file): string => $file->path, $files));
         // $old is sorted by path, so the deletions come in a stable order.
-        foreach (array_diff_key($old, $generated) as $path => $hash) {
+        foreach ($old as $path => $hash) {
             $current = is_file($path) ? file_get_contents($path) : false;
+            // Generated in this run under this path or, on a case-insensitive file system, under another case of it
+            // (renaming App\ItemList to App\Itemlist rewrites this very file, and deleting it would delete the class).
+            $generated = $paths[strtolower($path)] ?? null;
+            if ($current === false || ($generated !== null && @fileinode($generated) === fileinode($path))) {
+                continue;
+            }
             // The manifest is a file in the project, so it is not trusted: only our own generated files are deleted.
-            if ($current === false || !str_ends_with($path, '.php') || preg_match(self::GENERATED, $current) !== 1) {
+            if (!str_ends_with($path, '.php') || preg_match(self::GENERATED, $current) !== 1) {
+                $changes[] = new FileChange(ChangeKind::Abandoned, $path, 'it was generated earlier and its spec is gone, but it no longer starts with the generated header; delete it yourself');
+
                 continue;
             }
             $changes[] = hash('sha256', $this->normalized($current)) === $hash
@@ -163,7 +170,7 @@ final class FilesystemWriter implements FileWriter
         $directory = Path::directory($manifestPath);
         $relative = [];
         foreach ($hashes as $path => $hash) {
-            $relative[Path::within($directory, $path) ?? $path] = $hash;
+            $relative[Path::relative($directory, $path) ?? $path] = $hash;
         }
         ksort($relative, SORT_STRING);
         $this->write($manifestPath, json_encode(

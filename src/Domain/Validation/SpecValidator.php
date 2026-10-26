@@ -9,6 +9,7 @@ use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostics;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Model\TypeShape;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
+use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\Capability;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
@@ -24,10 +25,13 @@ final class SpecValidator
     /**
      * @param list<CollectionSpec> $specs
      * @param Closure(string $file): bool $isGeneratedFile whether an existing class file was written by this generator
+     * @param Closure(ClassName $class): bool $isGeneratedClass whether the collection's own target file is one we wrote:
+     *                                                          then it is not loaded, as an output for an older
+     *                                                          dto-collection may end in a fatal error PHP cannot catch
      *
      * @return list<CollectionSpec> the specs without errors
      */
-    public function validate(array $specs, TargetProfile $target, ClassFacts $facts, Diagnostics $diagnostics, Closure $isGeneratedFile): array
+    public function validate(array $specs, TargetProfile $target, ClassFacts $facts, Diagnostics $diagnostics, Closure $isGeneratedFile, Closure $isGeneratedClass): array
     {
         $valid = [];
         $taken = [];
@@ -41,9 +45,13 @@ final class SpecValidator
                     $first->class->fullName(),
                     $first->origin->absolute(),
                 ), $spec->origin);
+            } elseif ($spec->class->namespace() === '') {
+                $problems->error(sprintf('%s: a collection needs a namespace; a file without one cannot import the classes it uses', $spec->class->fullName()), $spec->origin);
             } elseif (!$this->isNamedLikeItsElement($spec, $problems)) {
                 $taken[$spec->class->key()] = $spec;
-                $this->checkExisting($spec, $facts, $problems, $isGeneratedFile);
+                if (!$isGeneratedClass($spec->class)) {
+                    $this->checkExisting($spec, $facts, $problems, $isGeneratedFile);
+                }
             }
             $this->checkElementType($spec, $target, $facts, $problems);
             $diagnostics->merge($problems);
@@ -137,6 +145,16 @@ final class SpecValidator
 
                 return;
             }
+        }
+        if (count($shape->branches) > 1 || $shape->hasIntersection()) {
+            // ODM's DefaultPersistentCollectionGenerator prints the null of a union return type as "?null": a parse error.
+            $problems->error(sprintf(
+                '%s: an ODM collection needs a single class or interface as its element type, not %s: Doctrine ODM cannot generate its persistent collection for a union or intersection',
+                $collection,
+                $shape->native(static fn (string $name): string => $name),
+            ), $spec->origin);
+
+            return;
         }
         foreach ($shape->classes() as $class) {
             if ($facts->kind($class) !== ClassKind::Interface && !$facts->hasOdmMapping($class)) {

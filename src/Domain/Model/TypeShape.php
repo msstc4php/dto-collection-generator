@@ -31,11 +31,23 @@ final class TypeShape
         $branches = [];
         foreach (explode('|', $type->describe()) as $branch) {
             if ($branch !== 'null') {
-                $branches[] = str_contains($branch, '&') ? explode('&', $branch) : (in_array($branch, ['int', 'float', 'string', 'bool'], true) ? $branch : [$branch]);
+                $branches[] = self::branch($branch);
             }
         }
 
         return new self($branches, $type->isNullable());
+    }
+
+    /**
+     * @return string|non-empty-list<string>
+     */
+    private static function branch(string $declaration): string|array
+    {
+        if (in_array($declaration, ['int', 'float', 'string', 'bool'], true)) {
+            return $declaration;
+        }
+
+        return explode('&', $declaration);
     }
 
     /**

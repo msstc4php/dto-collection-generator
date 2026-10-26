@@ -59,12 +59,29 @@ final class GenerateCommandTest extends TestCase
         self::assertSame("Out of date:\n  update generated/IntegerList.php\n", $check->getDisplay());
     }
 
+    public function testCheckNamesAnOutdatedManifest(): void
+    {
+        $this->tester()->execute([], self::SEPARATE_STDERR);
+        unlink($this->project->path('.dto-collection-generator.manifest.json'));
+
+        $check = $this->tester();
+        self::assertSame(1, $check->execute(['--check' => true], self::SEPARATE_STDERR));
+        self::assertSame("Out of date:\n  create .dto-collection-generator.manifest.json\n", $check->getDisplay());
+
+        file_put_contents($this->project->path('.dto-collection-generator.manifest.json'), '{"files": {}}');
+        $check = $this->tester();
+        self::assertSame(1, $check->execute(['--check' => true, '--format' => 'json'], self::SEPARATE_STDERR));
+        $report = json_decode($check->getDisplay(), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($report);
+        self::assertSame([['kind' => 'update', 'path' => '.dto-collection-generator.manifest.json']], $report['changes'] ?? null);
+    }
+
     public function testDryRun(): void
     {
         $tester = $this->tester();
 
         self::assertSame(0, $tester->execute(['--dry-run' => true], self::SEPARATE_STDERR));
-        self::assertSame("create generated/OrderLineList.php\ncreate generated/MutableOrderLineList.php\ncreate generated/IntegerList.php\nWould write: 3, delete: 0, unchanged: 0.\n", $tester->getDisplay());
+        self::assertSame("create generated/OrderLineList.php\ncreate generated/MutableOrderLineList.php\ncreate generated/IntegerList.php\ncreate .dto-collection-generator.manifest.json\nWould write: 3, delete: 0, unchanged: 0.\n", $tester->getDisplay());
         self::assertDirectoryDoesNotExist($this->project->path('generated'));
     }
 
@@ -91,6 +108,7 @@ final class GenerateCommandTest extends TestCase
                 ['kind' => 'create', 'path' => 'generated/OrderLineList.php'],
                 ['kind' => 'create', 'path' => 'generated/MutableOrderLineList.php'],
                 ['kind' => 'create', 'path' => 'generated/IntegerList.php'],
+                ['kind' => 'create', 'path' => '.dto-collection-generator.manifest.json'],
             ],
         ], json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR));
     }

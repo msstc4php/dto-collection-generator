@@ -131,6 +131,16 @@ final class GenerateTest extends TestCase
         self::assertNotNull($output->plan);
     }
 
+    public function testAbandonedFilesAreAWarning(): void
+    {
+        $this->writer = new RecordingWriter(ChangeKind::Abandoned);
+        $output = $this->generate($this->config(), source: new InMemorySpecSource([$this->spec('App\Collection\ItemList')]));
+
+        self::assertSame(Status::Ok, $output->status);
+        self::assertSame(['warning /project/src/Collection/ItemList.php: Left this file alone: in the way'], $this->messages($output));
+        self::assertSame(1, $this->writer->applied);
+    }
+
     public function testCheckModeNeverWrites(): void
     {
         $outdated = $this->generate($this->config(), Mode::Check, source: new InMemorySpecSource([$this->spec('App\Collection\ItemList')]));

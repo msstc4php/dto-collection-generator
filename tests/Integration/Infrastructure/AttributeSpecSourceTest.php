@@ -85,6 +85,32 @@ final class Elsewhere {}
         self::assertEquals($once, (new AttributeSpecSource())->specs([$root . '/missing', $root, $root . '/Nested'], new Diagnostics()));
     }
 
+    public function testTheAttributeNameIgnoresCase(): void
+    {
+        $directory = sys_get_temp_dir() . '/dto-collection-generator-scan-' . bin2hex(random_bytes(4));
+        mkdir($directory);
+        $file = $directory . '/Lower.php';
+        file_put_contents($file, '<?php
+namespace Outside;
+
+use MSSTC4PHP\DtoCollection\Attribute\typedcollection;
+
+#[typedcollection(class: \'A\\\\B\', variant: ' . Variant::class . '::Immutable)]
+final class Lower {}
+');
+        $diagnostics = new Diagnostics();
+
+        try {
+            (new AttributeSpecSource())->specs([$directory], $diagnostics);
+        } finally {
+            unlink($file);
+            rmdir($directory);
+        }
+
+        // Found, which is all this checks: the class itself is not autoloadable.
+        self::assertSame('Outside\Lower cannot be autoloaded; add its directory to the autoload section of composer.json', $diagnostics->all()[0]->message ?? null);
+    }
+
     public function testMissingDirectoryGivesNothing(): void
     {
         $diagnostics = new Diagnostics();

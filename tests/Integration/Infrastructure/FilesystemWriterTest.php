@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Integration\Infrastructure;
 
 use LogicException;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\ChangeKind;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\FileChange;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
@@ -63,6 +64,30 @@ final class FilesystemWriterTest extends TestCase
             . '        "src/ItemList.php": "' . hash('sha256', self::HEADER . 'one') . "\"\n    }\n}\n",
             file_get_contents($this->manifest),
         );
+    }
+
+    public function testRenameThatOnlyChangesCaseKeepsTheFile(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/ItemList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        // A case-insensitive file system (macOS, Windows) shows both spellings as one file; a hard link does here.
+        link($this->directory->path . '/src/ItemList.php', $this->directory->path . '/src/Itemlist.php');
+        $new = [$this->file('src/Itemlist.php', 'two')];
+
+        $plan = $writer->plan($this->manifest, $new);
+        self::assertSame([['update', 'src/Itemlist.php']], $this->changes($plan));
+        $writer->apply($plan, $this->manifest, $new);
+        self::assertStringEqualsFile($this->directory->path . '/src/Itemlist.php', self::HEADER . 'two');
+    }
+
+    public function testRenameThatOnlyChangesCaseOnACaseSensitiveFileSystem(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/ItemList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+
+        self::assertSame([['create', 'src/Itemlist.php'], ['delete', 'src/ItemList.php']], $this->changes($writer->plan($this->manifest, [$this->file('src/Itemlist.php', 'two')])));
     }
 
     public function testUnchangedFilesAreNotRewritten(): void
@@ -147,6 +172,16 @@ final class FilesystemWriterTest extends TestCase
         self::assertFalse($plan->isUpToDate());
     }
 
+    public function testEveryStaleFileIsLookedAt(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/A.php', 'a'), $this->file('src/B.php', 'b')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        unlink($this->directory->path . '/src/A.php');
+
+        self::assertSame([['delete', 'src/B.php']], $this->changes($writer->plan($this->manifest, [])));
+    }
+
     public function testLineEndingsDoNotMatter(): void
     {
         $writer = new FilesystemWriter();
@@ -175,7 +210,8 @@ final class FilesystemWriterTest extends TestCase
         try {
             $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
             self::assertTrue($writer->plan($this->manifest, $files)->isUpToDate());
-            self::assertStringContainsString(json_encode($outside->path . '/ItemList.php', JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES), (string) file_get_contents($this->manifest));
+            // Relative, so a committed manifest means the same on another machine.
+            self::assertStringContainsString('"../' . basename($outside->path) . '/ItemList.php"', (string) file_get_contents($this->manifest));
         } finally {
             $outside->remove();
         }
@@ -208,7 +244,7 @@ final class FilesystemWriterTest extends TestCase
 
         try {
             $plan = $writer->plan($this->manifest, []);
-            self::assertSame([], $plan->changes);
+            self::assertSame([ChangeKind::Abandoned, ChangeKind::Abandoned, ChangeKind::Abandoned], array_map(static fn (FileChange $change): ChangeKind => $change->kind, $plan->changes));
             $writer->apply($plan, $this->manifest, []);
             foreach ($victims as $victim) {
                 self::assertFileExists($victim);
@@ -226,7 +262,12 @@ final class FilesystemWriterTest extends TestCase
         $this->directory->write('src/A.php', "<?php\n\nfinal class A {}\n");
         file_put_contents($this->manifest, str_replace(hash('sha256', self::HEADER . 'a'), hash('sha256', "<?php\n\nfinal class A {}\n"), (string) file_get_contents($this->manifest)));
 
-        self::assertSame([['delete', 'src/B.php']], $this->changes($writer->plan($this->manifest, [])));
+        $plan = $writer->plan($this->manifest, []);
+        self::assertSame([['abandoned', 'src/A.php'], ['delete', 'src/B.php']], $this->changes($plan));
+        self::assertSame('it was generated earlier and its spec is gone, but it no longer starts with the generated header; delete it yourself', $plan->changes[0]->reason);
+        $writer->apply($plan, $this->manifest, []);
+        self::assertFileExists($this->directory->path . '/src/A.php');
+        self::assertTrue($writer->plan($this->manifest, [])->isUpToDate());
     }
 
     public function testAnInterruptedRunLeavesEveryFileInTheManifest(): void
@@ -291,7 +332,7 @@ final class FilesystemWriterTest extends TestCase
             $writer->apply($writer->plan($manifest, $files), $manifest, $files);
             $written = json_decode((string) file_get_contents($manifest), true, flags: JSON_THROW_ON_ERROR);
             self::assertIsArray($written);
-            self::assertSame([$root->path . '/c-outside/X.php', 'a.php'], array_keys((array) $written['files']));
+            self::assertSame(['../c-outside/X.php', 'a.php'], array_keys((array) $written['files']));
         } finally {
             $root->remove();
         }

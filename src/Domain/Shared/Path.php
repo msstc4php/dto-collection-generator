@@ -74,6 +74,30 @@ final class Path
         return str_starts_with($path, $prefix) ? substr($path, strlen($prefix)) : null;
     }
 
+    /**
+     * The path of $to as seen from the directory $from, with "../" where needed.
+     *
+     * @return string|null null when they share no root: another drive, another UNC share, or only one of them relative
+     */
+    public static function relative(string $from, string $to): ?string
+    {
+        $from = self::normalize($from);
+        $to = self::normalize($to);
+        $root = self::root($from);
+        if ($root !== self::root($to)) {
+            return null;
+        }
+        // Normalised paths hold no ".", ".." or empty segments below their root.
+        $fromSegments = self::below($root, $from);
+        $toSegments = self::below($root, $to);
+        $common = 0;
+        while (isset($fromSegments[$common], $toSegments[$common]) && $fromSegments[$common] === $toSegments[$common]) {
+            $common++;
+        }
+
+        return rtrim(str_repeat('../', count($fromSegments) - $common) . implode('/', array_slice($toSegments, $common)), '/');
+    }
+
     public static function directory(string $path): string
     {
         $normalized = self::normalize($path);
@@ -88,6 +112,28 @@ final class Path
         $directory = substr($normalized, 0, $position);
 
         return $directory === '' || preg_match('#^[A-Za-z]:\z#', $directory) === 1 ? $directory . '/' : $directory;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function below(string $root, string $normalized): array
+    {
+        $rest = substr($normalized, strlen($root));
+
+        return $rest === '' ? [] : explode('/', $rest);
+    }
+
+    /**
+     * @return string "//server/share", "C:/", "/", or "" for a relative path
+     */
+    private static function root(string $normalized): string
+    {
+        if (preg_match(self::UNC_ROOT, $normalized, $matches) === 1) {
+            return $matches[0];
+        }
+
+        return preg_match('#^(?:[A-Za-z]:)?/#', $normalized, $matches) === 1 ? $matches[0] : '';
     }
 
     /**

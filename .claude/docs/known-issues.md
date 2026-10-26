@@ -16,6 +16,16 @@
 - **A collection whose short name equals one of its file's imports** (`Collection`, `Closure`,
   `ElementType`, …): `ImportTable` qualifies that import (`\Doctrine\Common\Collections\Collection`)
   instead of importing it.
+- **Doctrine ODM cannot subclass a union element type**: `DefaultPersistentCollectionGenerator::formatType()`
+  prints the `null` of `Cat|Dog|null` as `?null` (ParseError). The validator therefore allows only a
+  single class or interface for the ODM variant. Lift the rule when ODM fixes `formatType()`.
+- **Loading the previous output can be fatal**: a generated class for an older dto-collection may fail
+  to link (missing abstract method) — uncatchable. The validator skips the "already exists" check when
+  the target file starts with our header, so such a class is never loaded.
+- **Case-only renames on macOS/Windows**: the stale scan skips a manifest path that is the same inode as a
+  generated path differing only in case (tested with a hard link on Linux).
+- **Manifest paths are relative to the config, with `../`** (`Path::relative()`); absolute only across
+  drives or UNC shares.
 - **No `tempnam()` for the atomic write**: it creates files with mode 0600, which the rename keeps.
 - **The manifest is not trusted**: a stale entry is deleted only if it is a `.php` file that
   starts with the generated header (an automated security review flagged arbitrary deletion).

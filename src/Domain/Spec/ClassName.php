@@ -27,6 +27,8 @@ final class ClassName
         'match', 'mixed', 'namespace', 'never', 'new', 'null', 'object', 'or', 'parent', 'print', 'private',
         'protected', 'public', 'readonly', 'require', 'require_once', 'return', 'self', 'static', 'string',
         'switch', 'throw', 'trait', 'true', 'try', 'unset', 'use', 'var', 'void', 'while', 'xor', 'yield',
+        '__class__', '__dir__', '__file__', '__function__', '__line__', '__method__', '__namespace__', '__property__',
+        '__trait__',
     ];
 
     private function __construct(private readonly string $name)
@@ -38,6 +40,10 @@ final class ClassName
         $trimmed = trim($name);
         if ($trimmed === '') {
             throw self::invalid($name, 'it is empty');
+        }
+        // PHP allows any byte above 0x7f in a name; the name ends up in JSON (manifest, report), which needs UTF-8.
+        if (preg_match('//u', $trimmed) !== 1) {
+            throw self::invalid($name, 'it is not valid UTF-8');
         }
         $full = str_starts_with($trimmed, '\\') ? substr($trimmed, 1) : $trimmed;
         if (preg_match(self::PATTERN, $full) !== 1) {

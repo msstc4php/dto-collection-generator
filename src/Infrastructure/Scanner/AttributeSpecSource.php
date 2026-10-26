@@ -37,7 +37,7 @@ final class AttributeSpecSource implements SpecSource
         $specs = [];
         foreach ($this->files($directories) as $file) {
             $code = file_get_contents($file);
-            if ($code === false || !str_contains($code, 'TypedCollection')) {
+            if ($code === false || stripos($code, 'TypedCollection') === false) {
                 continue;
             }
 

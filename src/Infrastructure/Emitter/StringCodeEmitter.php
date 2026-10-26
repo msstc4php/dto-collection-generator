@@ -47,13 +47,7 @@ final class StringCodeEmitter implements CodeEmitter
         $shape = TypeShape::of($spec->elementType);
         $odm = $spec->variant === Variant::Odm;
         $override = $target->supports(Capability::OverrideAttribute);
-        // As EqualityResolver: a comparator per single-class branch whose class is Equatable, in branch order.
-        $comparators = [];
-        foreach ($shape->branches as $branch) {
-            if (is_array($branch) && count($branch) === 1 && $facts->isEquatable($branch[0])) {
-                $comparators[] = $branch[0];
-            }
-        }
+        $comparators = $this->comparators($shape, $facts);
         $behaviours = array_filter([
             $spec->elementType->isNumeric() ? NumericBehaviour::class : null,
             $spec->elementType->isString() ? TextBehaviour::class : null,
@@ -68,7 +62,7 @@ final class StringCodeEmitter implements CodeEmitter
             Variant::Mutable => [MutableList::class, TypedList::class],
             Variant::Odm => [Collection::class, Selectable::class, MutableList::class, TypedList::class],
         };
-        $fixed = [
+        $imports = new ImportTable($spec->class, [
             Closure::class,
             $variantTrait,
             ...$behaviours,
@@ -78,21 +72,64 @@ final class StringCodeEmitter implements CodeEmitter
             ...$interfaces,
             'NoDiscard',
             ...($override ? ['Override'] : []),
-        ];
-        $imports = new ImportTable($spec->class, $fixed, $shape->classes());
+        ], $shape->classes());
         $name = $imports->name(...);
-        $t = $shape->phpDoc($name);
 
-        $lines = ['<?php', '', self::HEADER, '', 'declare(strict_types=1);', ''];
-        if ($spec->class->namespace() !== '') {
-            $lines[] = 'namespace ' . $spec->class->namespace() . ';';
+        $lines = [
+            ...$this->fileHeader($spec, $imports),
+            ...$this->classOpening($spec, $interfaces, $name, $shape->phpDoc($name), $odm),
+            ...$this->traitsAndProperties($variantTrait, $behaviours, $name, $shape->phpDoc($name)),
+        ];
+        foreach (MethodCatalogue::for($spec->variant) as $method) {
             $lines[] = '';
+            array_push($lines, ...$this->method($method, $shape, $name, $override, $odm));
         }
+        array_push($lines, ...$this->hooks($shape, $comparators, $name));
+        $lines[] = '}';
+
+        return implode("\n", $lines) . "\n";
+    }
+
+    /**
+     * As EqualityResolver: a comparator per single-class branch whose class is Equatable, in branch order.
+     *
+     * @return list<string>
+     */
+    private function comparators(TypeShape $shape, ClassFacts $facts): array
+    {
+        $comparators = [];
+        foreach ($shape->branches as $branch) {
+            if (is_array($branch) && count($branch) === 1 && $facts->isEquatable($branch[0])) {
+                $comparators[] = $branch[0];
+            }
+        }
+
+        return $comparators;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function fileHeader(CollectionSpec $spec, ImportTable $imports): array
+    {
+        $lines = ['<?php', '', self::HEADER, '', 'declare(strict_types=1);', '', 'namespace ' . $spec->class->namespace() . ';', ''];
         foreach ($imports->imports() as $import) {
             $lines[] = 'use ' . $import . ';';
         }
         $lines[] = '';
-        $lines[] = '/**';
+
+        return $lines;
+    }
+
+    /**
+     * @param list<string> $interfaces
+     * @param Closure(string): string $name
+     *
+     * @return list<string>
+     */
+    private function classOpening(CollectionSpec $spec, array $interfaces, Closure $name, string $t, bool $odm): array
+    {
+        $lines = ['/**'];
         foreach ($interfaces as $interface) {
             $generic = in_array($interface, [Collection::class, Selectable::class], true) ? 'int, ' . $t : $t;
             $lines[] = sprintf(' * @implements %s<%s>', $name($interface), $generic);
@@ -104,39 +141,64 @@ final class StringCodeEmitter implements CodeEmitter
         $lines[] = ' */';
         $lines[] = sprintf('%sclass %s implements %s', $odm ? '' : 'final ', $spec->class->shortName(), implode(', ', array_map($name, $interfaces)));
         $lines[] = '{';
-        $lines[] = self::INDENT . sprintf('/** @use %s<%s> */', $name($variantTrait), $t);
-        $lines[] = self::INDENT . sprintf('use %s;', $name($variantTrait));
+
+        return $lines;
+    }
+
+    /**
+     * @param array<string> $behaviours
+     * @param Closure(string): string $name
+     *
+     * @return list<string>
+     */
+    private function traitsAndProperties(string $variantTrait, array $behaviours, Closure $name, string $t): array
+    {
+        $lines = [
+            self::INDENT . sprintf('/** @use %s<%s> */', $name($variantTrait), $t),
+            self::INDENT . sprintf('use %s;', $name($variantTrait)),
+        ];
         foreach ($behaviours as $behaviour) {
             $lines[] = '';
             $lines[] = self::INDENT . sprintf('use %s;', $name($behaviour));
         }
-        $lines[] = '';
-        $lines[] = self::INDENT . sprintf('/** @var %s<%s>|null */', $name(ElementType::class), $t);
-        $lines[] = self::INDENT . sprintf('private static ?%s $type = null;', $name(ElementType::class));
-        $lines[] = '';
-        $lines[] = self::INDENT . sprintf('private static ?%s $sameness = null;', $name(Equality::class));
 
-        foreach (MethodCatalogue::for($spec->variant) as $method) {
-            $lines[] = '';
-            array_push($lines, ...$this->method($method, $shape, $name, $override, $odm));
-        }
+        return [
+            ...$lines,
+            '',
+            self::INDENT . sprintf('/** @var %s<%s>|null */', $name(ElementType::class), $t),
+            self::INDENT . sprintf('private static ?%s $type = null;', $name(ElementType::class)),
+            '',
+            self::INDENT . sprintf('private static ?%s $sameness = null;', $name(Equality::class)),
+        ];
+    }
 
-        $lines[] = '';
-        $lines[] = self::INDENT . '/**';
-        $lines[] = self::INDENT . sprintf(' * @return %s<%s>', $name(ElementType::class), $t);
-        $lines[] = self::INDENT . ' */';
-        $lines[] = self::INDENT . sprintf('protected function elementType(): %s', $name(ElementType::class));
-        $lines[] = self::INDENT . '{';
-        $lines[] = self::INDENT . self::INDENT . sprintf('return self::$type ??= %s;', $this->elementTypeExpression($shape, $name)) . ($shape->hasIntersection() ? ' ' . self::INTERSECTION_IGNORE : '');
-        $lines[] = self::INDENT . '}';
-        $lines[] = '';
-        $lines[] = self::INDENT . sprintf('protected function equality(): %s', $name(Equality::class));
-        $lines[] = self::INDENT . '{';
-        $lines[] = self::INDENT . self::INDENT . sprintf('return self::$sameness ??= %s;', $this->equalityExpression($comparators, $name));
-        $lines[] = self::INDENT . '}';
-        $lines[] = '}';
+    /**
+     * The two methods the behaviour traits ask for: elementType() and equality().
+     *
+     * @param list<string> $comparators
+     * @param Closure(string): string $name
+     *
+     * @return list<string>
+     */
+    private function hooks(TypeShape $shape, array $comparators, Closure $name): array
+    {
+        $elementType = sprintf('return self::$type ??= %s;', $this->elementTypeExpression($shape, $name));
 
-        return implode("\n", $lines) . "\n";
+        return [
+            '',
+            self::INDENT . '/**',
+            self::INDENT . sprintf(' * @return %s<%s>', $name(ElementType::class), $shape->phpDoc($name)),
+            self::INDENT . ' */',
+            self::INDENT . sprintf('protected function elementType(): %s', $name(ElementType::class)),
+            self::INDENT . '{',
+            self::INDENT . self::INDENT . $elementType . ($shape->hasIntersection() ? ' ' . self::INTERSECTION_IGNORE : ''),
+            self::INDENT . '}',
+            '',
+            self::INDENT . sprintf('protected function equality(): %s', $name(Equality::class)),
+            self::INDENT . '{',
+            self::INDENT . self::INDENT . sprintf('return self::$sameness ??= %s;', $this->equalityExpression($comparators, $name)),
+            self::INDENT . '}',
+        ];
     }
 
     /**

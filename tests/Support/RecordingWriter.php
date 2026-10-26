@@ -33,7 +33,7 @@ final class RecordingWriter implements FileWriter
         $this->planned = $files;
 
         return new WritePlan(array_map(
-            fn (GeneratedFile $file): FileChange => new FileChange($this->kind, $file->path, $this->kind === ChangeKind::Conflict ? 'in the way' : null),
+            fn (GeneratedFile $file): FileChange => new FileChange($this->kind, $file->path, in_array($this->kind, [ChangeKind::Conflict, ChangeKind::Abandoned], true) ? 'in the way' : null),
             $files,
         ), false);
     }

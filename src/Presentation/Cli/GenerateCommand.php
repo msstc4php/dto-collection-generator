@@ -149,7 +149,7 @@ final class GenerateCommand extends Command
     }
 
     /**
-     * The files that change; unchanged ones are left out.
+     * The files that change, then the manifest; unchanged files are left out.
      *
      * @return list<ChangeShape>
      */
@@ -160,6 +160,10 @@ final class GenerateCommand extends Command
             if ($change->kind !== ChangeKind::Unchanged) {
                 $changes[] = ['kind' => $change->kind->value, 'path' => Path::within($this->workingDirectory, $change->path) ?? $change->path];
             }
+        }
+        if ($result->plan?->manifestOutdated === true) {
+            $manifest = $result->directory . '/' . Generate::MANIFEST;
+            $changes[] = ['kind' => is_file($manifest) ? 'update' : 'create', 'path' => Path::within($this->workingDirectory, $manifest) ?? $manifest];
         }
 
         return $changes;

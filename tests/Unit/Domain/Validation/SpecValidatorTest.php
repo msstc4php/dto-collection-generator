@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Domain\Validation;
 
+use ArrayObject;
 use Closure;
+use Ds\Vector;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
 use MSSTC4PHP\DtoCollection\Equatable;
@@ -16,6 +18,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\CollectionSpec;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\PhpVersion;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
+use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\ClassFacts;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\SpecValidator;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Animal;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Cat;
@@ -46,7 +49,7 @@ final class SpecValidatorTest extends TestCase
             Tag::class => ['kind' => ClassKind::OrdinaryClass],
             'App\Existing' => ['kind' => ClassKind::OrdinaryClass, 'file' => '/project/src/Existing.php'],
             'App\Generated' => ['kind' => ClassKind::OrdinaryClass, 'file' => '/project/src/Generated.php'],
-            'ArrayObject' => ['kind' => ClassKind::OrdinaryClass],
+            Vector::class => ['kind' => ClassKind::OrdinaryClass],
         ]);
     }
 
@@ -86,8 +89,8 @@ final class SpecValidatorTest extends TestCase
     {
         $diagnostics = new Diagnostics();
 
-        self::assertSame([], $this->validate([$this->spec('ArrayObject', ElementType::ofClass(Item::class))], $diagnostics));
-        self::assertSame(['error 1: ArrayObject already exists, built into PHP or an extension; choose another class name'], $this->messages($diagnostics));
+        self::assertSame([], $this->validate([$this->spec(Vector::class, ElementType::ofClass(Item::class))], $diagnostics));
+        self::assertSame(['error 1: Ds\Vector already exists, built into PHP or an extension; choose another class name'], $this->messages($diagnostics));
     }
 
     public function testExistingGeneratedClassIsNotACollision(): void
@@ -97,6 +100,78 @@ final class SpecValidatorTest extends TestCase
 
         self::assertSame([$spec], $this->validate([$spec], $diagnostics));
         self::assertCount(0, $diagnostics);
+    }
+
+    public function testAGeneratedCollectionIsNotLoaded(): void
+    {
+        $asked = new ArrayObject();
+        $facts = new class($this->facts, $asked) implements ClassFacts {
+            /** @param ArrayObject<int, string> $asked */
+            public function __construct(private readonly InMemoryClassInspector $inner, private readonly ArrayObject $asked)
+            {
+            }
+
+            public function kind(string $class): ?ClassKind
+            {
+                $this->asked->append($class);
+
+                return $this->inner->kind($class);
+            }
+
+            public function isA(string $class, string $parent): bool
+            {
+                return $this->inner->isA($class, $parent);
+            }
+
+            public function isEquatable(string $class): bool
+            {
+                return $this->inner->isEquatable($class);
+            }
+
+            public function hasOdmMapping(string $class): bool
+            {
+                return $this->inner->hasOdmMapping($class);
+            }
+
+            public function isOdmInstalled(): bool
+            {
+                return $this->inner->isOdmInstalled();
+            }
+
+            public function fileOf(string $class): ?string
+            {
+                return $this->inner->fileOf($class);
+            }
+        };
+        $spec = self::spec('App\Stale', ElementType::ofClass(Item::class));
+        $diagnostics = new Diagnostics();
+
+        // An earlier output may no longer load against a newer dto-collection: a fatal error PHP cannot catch.
+        self::assertSame([$spec], (new SpecValidator())->validate([$spec], self::target('8.1'), $facts, $diagnostics, static fn (): bool => false, static fn (ClassName $class): bool => $class->fullName() === 'App\Stale'));
+        self::assertNotContains('App\Stale', $asked->getArrayCopy());
+    }
+
+    public function testCollectionNeedsANamespace(): void
+    {
+        $diagnostics = new Diagnostics();
+
+        self::assertSame([], $this->validate([self::spec('ItemList', ElementType::ofClass(Item::class))], $diagnostics));
+        self::assertSame(['error 1: ItemList: a collection needs a namespace; a file without one cannot import the classes it uses'], self::messages($diagnostics));
+    }
+
+    public function testOdmNeedsASingleClass(): void
+    {
+        $specs = [
+            self::spec('App\AnimalCollection', ElementType::union(ElementType::ofClass(Cat::class), ElementType::ofClass(Dog::class)), Variant::Odm, marked: Cat::class, line: 1),
+            self::spec('App\EquatableAnimalCollection', ElementType::intersection(Animal::class, Equatable::class), Variant::Odm, marked: Cat::class, line: 2),
+        ];
+        $diagnostics = new Diagnostics();
+
+        self::assertSame([], $this->validate($specs, $diagnostics, '8.2'));
+        self::assertSame([
+            sprintf('error 1: App\AnimalCollection: an ODM collection needs a single class or interface as its element type, not %s|%s: Doctrine ODM cannot generate its persistent collection for a union or intersection', Cat::class, Dog::class),
+            sprintf('error 2: App\EquatableAnimalCollection: an ODM collection needs a single class or interface as its element type, not %s&%s: Doctrine ODM cannot generate its persistent collection for a union or intersection', Animal::class, Equatable::class),
+        ], self::messages($diagnostics));
     }
 
     public function testCollectionNamedLikeItsElement(): void
@@ -160,7 +235,7 @@ final class SpecValidatorTest extends TestCase
         $facts = new InMemoryClassInspector([Pet::class => ['kind' => ClassKind::OrdinaryClass, 'odm' => true]], odmInstalled: false);
         $diagnostics = new Diagnostics();
 
-        self::assertSame([], (new SpecValidator())->validate([$this->spec('App\PetCollection', ElementType::ofClass(Pet::class), Variant::Odm, marked: Pet::class)], $this->target('8.1'), $facts, $diagnostics, static fn (): bool => true));
+        self::assertSame([], (new SpecValidator())->validate([$this->spec('App\PetCollection', ElementType::ofClass(Pet::class), Variant::Odm, marked: Pet::class)], $this->target('8.1'), $facts, $diagnostics, static fn (): bool => true, static fn (): bool => false));
         self::assertSame(['error 1: App\PetCollection: the ODM variant needs doctrine/mongodb-odm, which is not installed'], $this->messages($diagnostics));
     }
 
@@ -190,6 +265,7 @@ final class SpecValidatorTest extends TestCase
             $this->facts,
             $diagnostics,
             $isGenerated ?? static fn (string $file): bool => $file === '/project/src/Generated.php',
+            static fn (ClassName $class): bool => $class->fullName() === 'App\Stale',
         );
     }
 

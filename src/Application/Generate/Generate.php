@@ -19,6 +19,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Port\WriteFailed;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostics;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
+use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Target\TargetProfile;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Validation\SpecValidator;
 
@@ -59,6 +60,8 @@ final class Generate
         foreach ($plan->changes as $change) {
             if ($change->kind === ChangeKind::Conflict) {
                 $diagnostics->error('Cannot write this file: ' . $change->reason, Location::inFile($change->path));
+            } elseif ($change->kind === ChangeKind::Abandoned) {
+                $diagnostics->warning('Left this file alone: ' . $change->reason, Location::inFile($change->path));
             }
         }
         if ($plan->hasConflicts()) {
@@ -91,7 +94,18 @@ final class Generate
     private function files(GeneratorConfig $config, TargetProfile $target, Diagnostics $diagnostics): ?array
     {
         $specs = [...$this->specSource->specs($config->sources, $diagnostics), ...$config->collections];
-        $valid = (new SpecValidator())->validate($specs, $target, $this->inspector, $diagnostics, $this->writer->isGenerated(...));
+        $valid = (new SpecValidator())->validate(
+            $specs,
+            $target,
+            $this->inspector,
+            $diagnostics,
+            $this->writer->isGenerated(...),
+            function (ClassName $class) use ($config): bool {
+                $path = $this->layout->pathFor($class, $config);
+
+                return $path !== null && $this->writer->isGenerated($path);
+            },
+        );
         if ($diagnostics->hasErrors()) {
             return null;
         }

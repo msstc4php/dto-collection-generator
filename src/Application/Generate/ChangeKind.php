@@ -13,4 +13,7 @@ enum ChangeKind: string
 
     /** A file the generator must not touch stands in the way; nothing is written. */
     case Conflict = 'conflict';
+
+    /** Generated earlier, its spec is gone, and it is no longer marked generated: left alone and dropped from the manifest. */
+    case Abandoned = 'abandoned';
 }

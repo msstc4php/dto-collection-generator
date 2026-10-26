@@ -114,4 +114,32 @@ final class PathTest extends TestCase
         self::assertFalse(Path::isAbsolute('C:a'));
         self::assertFalse(Path::isAbsolute('dir/C:/x'));
     }
+
+    /**
+     * @return iterable<string, array{string, string, ?string}>
+     */
+    public static function relatives(): iterable
+    {
+        yield 'inside' => ['/project', '/project/src/A.php', 'src/A.php'];
+        yield 'itself' => ['/project', '/project', ''];
+        yield 'sibling' => ['/project/config', '/project/src/A.php', '../src/A.php'];
+        yield 'two up' => ['/a/b/c', '/a/x/y.php', '../../x/y.php'];
+        yield 'root' => ['/', '/a.php', 'a.php'];
+        yield 'from below the root' => ['/a', '/b.php', '../b.php'];
+        yield 'similar prefix' => ['/project', '/projectile/A.php', '../projectile/A.php'];
+        yield 'other drive' => ['C:/project', 'D:/src/A.php', null];
+        yield 'same drive' => ['C:/project/config', 'C:/project/src/A.php', '../src/A.php'];
+        yield 'unc share' => ['//server/share/project', '//server/share/src/A.php', '../src/A.php'];
+        yield 'other unc share' => ['//server/share/project', '//server/other/A.php', null];
+        yield 'relative and absolute' => ['project', '/src/A.php', null];
+        yield 'nested relative and absolute' => ['project/config', '/src/A.php', null];
+        yield 'both relative' => ['project/config', 'project/src/A.php', '../src/A.php'];
+        yield 'parent' => ['/a/b', '/a', '..'];
+    }
+
+    #[DataProvider('relatives')]
+    public function testRelative(string $from, string $to, ?string $expected): void
+    {
+        self::assertSame($expected, Path::relative($from, $to));
+    }
 }

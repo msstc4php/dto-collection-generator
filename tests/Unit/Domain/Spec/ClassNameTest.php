@@ -60,6 +60,9 @@ final class ClassNameTest extends TestCase
         yield 'iterable lower case' => ['App\iterable', '"iterable" is a reserved word'];
         yield 'mixed' => ['App\Collection\Mixed', '"Mixed" is a reserved word'];
         yield 'readonly' => ['Readonly', '"Readonly" is a reserved word'];
+        yield 'magic constant' => ['App\__CLASS__', '"__CLASS__" is a reserved word'];
+        yield 'magic constant in lower case' => ['App\__dir__', '"__dir__" is a reserved word'];
+        yield 'not utf-8' => ["App\\Caf\xE9List", 'it is not valid UTF-8'];
         yield 'self' => ['App\Self', '"Self" is a reserved word'];
     }
 
