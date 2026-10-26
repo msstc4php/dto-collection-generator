@@ -41,8 +41,6 @@ final class StringCodeEmitter implements CodeEmitter
 {
     private const INDENT = '    ';
 
-    private const INTERSECTION_IGNORE = '// @phpstan-ignore return.type, assign.propertyType (ElementType::intersection() is typed ElementType<object>: PHPDoc cannot name the intersection of variadic class-strings)';
-
     public function emit(CollectionSpec $spec, TargetProfile $target, ClassFacts $facts): string
     {
         $shape = TypeShape::of($spec->elementType);
@@ -195,7 +193,7 @@ final class StringCodeEmitter implements CodeEmitter
             self::INDENT . ' */',
             self::INDENT . sprintf('protected function elementType(): %s', $name(ElementType::class)),
             self::INDENT . '{',
-            self::INDENT . self::INDENT . $elementType . ($shape->hasIntersection() ? ' ' . self::INTERSECTION_IGNORE : ''),
+            self::INDENT . self::INDENT . $elementType,
             self::INDENT . '}',
             '',
             self::INDENT . sprintf('protected function equality(): %s', $name(Equality::class)),
@@ -300,9 +298,13 @@ final class StringCodeEmitter implements CodeEmitter
                     default => $branch,
                 });
             }
-            $classes = implode(', ', array_map(static fn (string $class): string => $name($class) . '::class', $branch));
+            // intersection() is typed ElementType<object>; the andInstanceOf() chain keeps A&B for PHPStan.
+            $expression = sprintf('%s::ofClass(%s::class)', $name(ElementType::class), $name(array_shift($branch)));
+            foreach ($branch as $class) {
+                $expression .= sprintf('->andInstanceOf(%s::class)', $name($class));
+            }
 
-            return sprintf('%s::%s(%s)', $name(ElementType::class), count($branch) === 1 ? 'ofClass' : 'intersection', $classes);
+            return $expression;
         }, $shape->branches);
         $expression = count($branches) === 1 ? $branches[0] : sprintf('%s::union(%s)', $name(ElementType::class), implode(', ', $branches));
 

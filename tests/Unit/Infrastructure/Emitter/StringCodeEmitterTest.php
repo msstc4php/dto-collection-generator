@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Infrastructure\Emitter;
 
+use Countable;
 use LogicException;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
@@ -25,18 +26,20 @@ use PHPUnit\Framework\TestCase;
 
 final class StringCodeEmitterTest extends TestCase
 {
-    private const IGNORE = '// @phpstan-ignore return.type, assign.propertyType (ElementType::intersection() is typed ElementType<object>: PHPDoc cannot name the intersection of variadic class-strings)';
-
-    public function testIntersectionElementTypeCarriesANarrowIgnore(): void
+    public function testIntersectionElementTypeIsTypedExactly(): void
     {
-        $code = $this->emit('App\Collection\SomeList', ElementType::intersection(Animal::class, Equatable::class));
+        $code = $this->emit('App\Collection\SomeList', ElementType::intersection(Animal::class, Equatable::class, Countable::class));
 
-        self::assertStringContainsString('        return self::$type ??= ElementType::intersection(Animal::class, Equatable::class); ' . self::IGNORE . "\n", $code);
+        self::assertStringContainsString('        return self::$type ??= ElementType::ofClass(Animal::class)->andInstanceOf(Equatable::class)->andInstanceOf(\\' . Countable::class . '::class);' . "\n", $code);
+        self::assertStringNotContainsString('@phpstan-ignore', $code);
     }
 
-    public function testOtherElementTypesHaveNoIgnore(): void
+    public function testIntersectionInsideAUnionIsTypedExactly(): void
     {
-        self::assertStringNotContainsString('@phpstan-ignore', $this->emit('App\Collection\SomeList', ElementType::union(ElementType::ofClass(Item::class), ElementType::integer())->nullable()));
+        $code = $this->emit('App\\Collection\\SomeList', ElementType::union(ElementType::intersection(Animal::class, Equatable::class), ElementType::ofClass(Item::class))->nullable());
+
+        self::assertStringContainsString('return self::$type ??= ElementType::union(ElementType::ofClass(Animal::class)->andInstanceOf(Equatable::class), ElementType::ofClass(Item::class))->nullable();' . "\n", $code);
+        self::assertStringNotContainsString('@phpstan-ignore', $code);
     }
 
     public function testEveryEquatableBranchGetsAComparator(): void

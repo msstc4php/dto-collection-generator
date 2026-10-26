@@ -226,7 +226,7 @@ final class AnimalEquatableList implements MutableList, TypedList
      */
     protected function elementType(): ElementType
     {
-        return self::$type ??= ElementType::intersection(Animal::class, Equatable::class); // @phpstan-ignore return.type, assign.propertyType (ElementType::intersection() is typed ElementType<object>: PHPDoc cannot name the intersection of variadic class-strings)
+        return self::$type ??= ElementType::ofClass(Animal::class)->andInstanceOf(Equatable::class);
     }
 
     protected function equality(): Equality

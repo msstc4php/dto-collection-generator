@@ -127,7 +127,6 @@ $output = DtoCollectionGenerator::generator()(new Input('/path/to/dto-collection
 
 ## PHPStan and the generated code
 
-The generated classes pass PHPStan at level max. For an intersection element type, one line
-carries `@phpstan-ignore return.type, assign.propertyType`: `ElementType::intersection()` is
-typed `ElementType<object>`. A generic interface in the element type (`Traversable`, say) needs
-type arguments that a spec cannot give, so PHPStan reports a missing iterable value type there.
+The generated classes pass PHPStan at level max without ignores. A generic interface in the
+element type (`Traversable`, say) needs type arguments that a spec cannot give, so PHPStan reports
+a missing iterable value type there.

@@ -99,6 +99,7 @@ final class GoldenEmitterTest extends TestCase
         ];
         if ($php !== '8.1') {
             $specs[] = self::spec('AnimalEquatableList', Variant::Mutable, ElementType::intersection(Animal::class, Equatable::class));
+            $specs[] = self::spec('AnimalEquatableOrItemList', Variant::Immutable, ElementType::union(ElementType::intersection(Animal::class, Equatable::class), ElementType::ofClass(Item::class))->nullable());
         }
 
         return $specs;
