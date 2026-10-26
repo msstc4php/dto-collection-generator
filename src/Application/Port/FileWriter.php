@@ -10,6 +10,11 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
 interface FileWriter
 {
     /**
+     * Whether the file starts with the header of a generated file.
+     */
+    public function isGenerated(string $path): bool;
+
+    /**
      * Compares the files with the disk and with the manifest of the previous run; changes nothing.
      *
      * @param list<GeneratedFile> $files

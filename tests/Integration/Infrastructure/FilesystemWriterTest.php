@@ -175,6 +175,46 @@ final class FilesystemWriterTest extends TestCase
         $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
     }
 
+    public function testManifestEntriesForOtherFilesAreIgnored(): void
+    {
+        $outside = new TemporaryDirectory();
+        $victims = [
+            $outside->write('notes.txt', 'keep me'),
+            $this->directory->write('src/HandWritten.php', "<?php\n\nfinal class HandWritten {}\n"),
+            $this->directory->write('src/generated.txt', self::HEADER),
+        ];
+        $entries = [];
+        foreach ($victims as $victim) {
+            $entries[$victim] = hash('sha256', (string) file_get_contents($victim));
+        }
+        file_put_contents($this->manifest, json_encode(['generator' => 'msstc4php/dto-collection-generator', 'files' => $entries], JSON_THROW_ON_ERROR));
+        $writer = new FilesystemWriter();
+
+        try {
+            $plan = $writer->plan($this->manifest, []);
+            self::assertSame([], $plan->changes);
+            $writer->apply($plan, $this->manifest, []);
+            foreach ($victims as $victim) {
+                self::assertFileExists($victim);
+            }
+        } finally {
+            $outside->remove();
+        }
+    }
+
+    public function testRecognisesGeneratedFiles(): void
+    {
+        $generated = $this->directory->write('src/Generated.php', self::HEADER . 'final class Generated {}');
+        $crlf = $this->directory->write('src/Crlf.php', str_replace("\n", "\r\n", self::HEADER));
+        $handWritten = $this->directory->write('src/HandWritten.php', "<?php\n\nfinal class HandWritten {}\n");
+        $writer = new FilesystemWriter();
+
+        self::assertTrue($writer->isGenerated($generated));
+        self::assertTrue($writer->isGenerated($crlf));
+        self::assertFalse($writer->isGenerated($handWritten));
+        self::assertFalse($writer->isGenerated($this->directory->path . '/missing.php'));
+    }
+
     public function testUnreadableManifestCountsAsEmpty(): void
     {
         file_put_contents($this->manifest, 'not json');
