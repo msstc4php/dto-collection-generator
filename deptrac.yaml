@@ -1,0 +1,60 @@
+deptrac:
+  paths:
+    - ./src
+  layers:
+    - name: EntryPoint
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\(DtoCollectionGenerator|ComposerPlugin)$#'
+    - name: Domain
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\Domain\\(?!Validation\\SpecValidator$)#'
+    - name: DomainService
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Validation\\SpecValidator$#'
+    - name: Application
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\Application\\#'
+    - name: Infrastructure
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\#'
+    - name: Presentation
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollectionGenerator\\Presentation\\#'
+    - name: DtoCollection
+      collectors:
+        - type: classNameRegex
+          value: '#^MSSTC4PHP\\DtoCollection\\#'
+    - name: PhpParser
+      collectors:
+        - type: classNameRegex
+          value: '#^PhpParser\\#'
+    - name: Symfony
+      collectors:
+        - type: classNameRegex
+          value: '#^Symfony\\#'
+    - name: Composer
+      collectors:
+        - type: classNameRegex
+          value: '#^Composer\\#'
+    - name: Doctrine
+      collectors:
+        - type: classNameRegex
+          value: '#^Doctrine\\#'
+  ruleset:
+    Domain: [DtoCollection]
+    DomainService: [Domain, DtoCollection]
+    Application: [Domain, DomainService, DtoCollection]
+    Infrastructure: [Domain, Application, DtoCollection, PhpParser, Symfony, Composer, Doctrine]
+    Presentation: [Application, Domain, DtoCollection, Symfony, Composer]
+    EntryPoint: [Domain, DomainService, Application, Infrastructure, Presentation, DtoCollection, PhpParser, Symfony, Composer]
+    DtoCollection: ~
+    PhpParser: ~
+    Symfony: ~
+    Composer: ~
+    Doctrine: ~

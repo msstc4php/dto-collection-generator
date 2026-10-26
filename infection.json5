@@ -1,0 +1,18 @@
+{
+    "$schema": "tools/vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"]
+    },
+    "timeout": 30,
+    // Equivalent mutants are ignored below with a reason each, so the floor sits one below the 100 % target.
+    "minMsi": 99,
+    "minCoveredMsi": 99,
+    "logs": {
+        "github": true,
+        "text": "var/infection/infection.log",
+        "json": "var/infection/infection.json"
+    },
+    "mutators": {
+        "@default": true
+    }
+}

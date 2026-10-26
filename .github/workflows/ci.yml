@@ -1,0 +1,110 @@
+name: CI
+
+# msstc4php/dto-collection is not published yet: composer.json takes it from the path repository ../dto-collection,
+# which a CI checkout does not have. Switch to a vcs repository (or Packagist) once dto-collection is pushed.
+
+on:
+  push:
+    branches: ['main']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests on PHP ${{ matrix.php }} (${{ matrix.dependencies }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3', '8.4']
+        dependencies: [highest]
+        include:
+          - php: '8.1'
+            dependencies: lowest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mongodb
+          coverage: none
+      - name: Install dependencies
+        run: |
+          composer config platform --unset
+          composer update --no-interaction --no-progress ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
+      - name: Lint sources with this PHP
+        run: find src tests -name '*.php' -not -path 'tests/Fixtures/*' -print0 | xargs -0 -n1 php -l > /dev/null
+      - run: vendor/bin/phpunit --fail-on-skipped
+
+  static:
+    name: Static analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mongodb
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer install --no-interaction --no-progress --working-dir=tools
+      - run: tools/vendor/bin/phpstan analyse --memory-limit=512M -c phpstan.dist.neon --no-progress
+      - run: tools/vendor/bin/php-cs-fixer check
+      - run: composer validate --strict --no-check-publish
+      - run: tools/vendor/bin/rector process -n
+      - run: tools/vendor/bin/deptrac analyse --config-file=deptrac.yaml --no-progress --fail-on-uncovered
+      - run: composer audit
+
+  targets:
+    name: Generated code on PHP 8.1–8.5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mongodb
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+      - run: composer install --no-interaction --no-progress --working-dir=tools
+      - run: make test-targets
+
+  bc:
+    name: BC check (Roave)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mongodb
+          coverage: none
+      - run: composer install --no-interaction --no-progress --working-dir=tools
+      - run: |
+          if ! base=$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude='*-*' 2>/dev/null); then
+            echo "No stable release tag yet: nothing to compare against."
+            exit 0
+          fi
+          tools/vendor/bin/roave-backward-compatibility-check --from="${base}" --install-development-dependencies --format=github-actions --no-interaction
+
+  mutation:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mongodb
+          coverage: xdebug
+      - run: composer install --no-interaction --no-progress
+      - run: composer install --no-interaction --no-progress --working-dir=tools
+      - run: make infection THREADS=4
