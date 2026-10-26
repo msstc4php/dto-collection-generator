@@ -47,16 +47,12 @@ final class TypeShape
     }
 
     /**
-     * @param Closure(string): string $name
+     * For an intersection this is DNF, `(A&B)|null`: PHP 8.2+, which the validator demands.
      *
-     * @return string|null null when ?T needs DNF and the target has none
+     * @param Closure(string): string $name
      */
-    public function nullableNative(Closure $name, bool $dnf): ?string
+    public function nullableNative(Closure $name): string
     {
-        if (!$dnf && $this->hasIntersection()) {
-            return null;
-        }
-
         return $this->withNull($name, true);
     }
 

@@ -70,14 +70,14 @@ final class ReflectionClassInspector implements ClassInspector
     private function reflect(string $class): ?ReflectionClass
     {
         try {
-            if (!class_exists($class) && !interface_exists($class) && !trait_exists($class) && !enum_exists($class)) {
-                return null;
+            // class_exists() covers enums.
+            if (class_exists($class) || interface_exists($class) || trait_exists($class)) {
+                return new ReflectionClass($class);
             }
-
-            return new ReflectionClass($class);
         } catch (Throwable) {
-            // A class file that fails to load (a missing parent, a parse error) is reported as a missing class.
-            return null;
+            // Its file fails to load (a missing parent, a parse error): reported as a missing class.
         }
+
+        return null;
     }
 }

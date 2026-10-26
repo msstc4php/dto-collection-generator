@@ -16,6 +16,8 @@ final class PhpVersion implements Stringable
 {
     public const SUPPORTED = ['8.1', '8.2', '8.3', '8.4', '8.5'];
 
+    private const IDS = ['8.1' => 80100, '8.2' => 80200, '8.3' => 80300, '8.4' => 80400, '8.5' => 80500];
+
     /**
      * @param value-of<self::SUPPORTED> $version
      */
@@ -49,9 +51,7 @@ final class PhpVersion implements Stringable
      */
     public function id(): int
     {
-        [$major, $minor] = explode('.', $this->version);
-
-        return max(1, (int) $major * 10000 + (int) $minor * 100);
+        return self::IDS[$this->version];
     }
 
     public function isAtLeast(self $other): bool

@@ -5,6 +5,7 @@ $finder = (new PhpCsFixer\Finder())
     ->in(__DIR__ . '/tests')
     // A deliberately unparsable fixture: the generator must report it.
     ->notPath('Fixtures/Projects/Scan/Syntax.php')
+    ->notPath('Fixtures/Projects/Scan/Unparsable.php')
     ->append([__FILE__, __DIR__ . '/rector.php'])
 ;
 

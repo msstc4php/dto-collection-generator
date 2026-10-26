@@ -18,7 +18,7 @@ final class ComposerProjectLayoutTest extends TestCase
     {
         $this->directory = new TemporaryDirectory();
         $this->directory->write('composer.json', json_encode([
-            'autoload' => ['psr-4' => ['App\\' => 'src/', 'App\\Sub\\' => ['lib/sub', 'other'], 'Lib\\' => 'library']],
+            'autoload' => ['psr-4' => ['App\\' => 'src/', 'App\\Sub\\' => ['lib/sub', 'other'], 'Lib\\' => 'library', '1' => 'numeric', 'Broken\\' => 5]],
             'autoload-dev' => ['psr-4' => ['App\\Tests\\' => 'tests/']],
         ], JSON_THROW_ON_ERROR));
     }
@@ -63,6 +63,37 @@ final class ComposerProjectLayoutTest extends TestCase
             $root . '/src/ItemList.php',
             (new ComposerProjectLayout())->pathFor(ClassName::fromString('App\ItemList'), $this->config($root . '/config', [])),
         );
+    }
+
+    public function testUnreadableComposerJson(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('root can read any file');
+        }
+        chmod($this->directory->path . '/composer.json', 0o000);
+
+        try {
+            self::assertNull((new ComposerProjectLayout())->pathFor(ClassName::fromString('App\ItemList'), $this->config($this->directory->path, [])));
+        } finally {
+            chmod($this->directory->path . '/composer.json', 0o644);
+        }
+    }
+
+    public function testInvalidComposerJson(): void
+    {
+        file_put_contents($this->directory->path . '/composer.json', '{"autoload": ');
+
+        self::assertNull((new ComposerProjectLayout())->pathFor(ClassName::fromString('App\ItemList'), $this->config($this->directory->path, [])));
+    }
+
+    public function testComposerJsonEditedBetweenCalls(): void
+    {
+        $layout = new ComposerProjectLayout();
+        $config = $this->config($this->directory->path, []);
+        self::assertNotNull($layout->pathFor(ClassName::fromString('App\ItemList'), $config));
+
+        file_put_contents($this->directory->path . '/composer.json', '{}');
+        self::assertNull($layout->pathFor(ClassName::fromString('App\ItemList'), $config));
     }
 
     public function testWithoutComposerJson(): void

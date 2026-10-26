@@ -95,7 +95,7 @@ final class SpecValidator
                 '%s: an intersection element type needs target PHP %s or newer, where %s can be declared; the target is PHP %s',
                 $collection,
                 Capability::DnfTypes->minimumVersion(),
-                (string) $shape->nullableNative(static fn (string $name): string => $name, true),
+                $shape->nullableNative(static fn (string $name): string => $name),
                 $target->php,
             ), $spec->origin);
         }

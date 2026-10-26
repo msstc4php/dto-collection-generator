@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Infrastructure\Emitter;
 
 use Doctrine\Common\Collections\Collection;
+use LogicException;
 use MSSTC4PHP\DtoCollection\ElementType;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Emitter\ImportTable;
@@ -62,6 +63,34 @@ final class ImportTableTest extends TestCase
         $table = new ImportTable(ClassName::fromString('App\ItemList'), self::FIXED, ['App\Other\ItemList']);
 
         self::assertSame('\App\Other\ItemList', $table->name('App\Other\ItemList'));
+    }
+
+    public function testFixedImportSharingTheCollectionsShortNameIsQualified(): void
+    {
+        $table = new ImportTable(ClassName::fromString('App\Collection\Collection'), self::FIXED, ['App\Model\Item']);
+
+        self::assertSame('\\' . Collection::class, $table->name(Collection::class));
+        self::assertNotContains(Collection::class, $table->imports());
+        self::assertSame('Item', $table->name('App\Model\Item'));
+    }
+
+    public function testTheSameClassInAnotherCaseIsOneClass(): void
+    {
+        $table = new ImportTable(ClassName::fromString('App\ItemList'), self::FIXED, ['A\Item', 'a\item', 'A\Item', 'B\Tag']);
+
+        self::assertSame('Item', $table->name('A\Item'));
+        self::assertSame('Item', $table->name('a\ITEM'));
+        self::assertSame('Tag', $table->name('B\Tag'));
+        self::assertSame(['A\Item'], array_values(array_filter($table->imports(), static fn (string $import): bool => stripos($import, 'item') !== false)));
+    }
+
+    public function testUnknownClassIsALogicError(): void
+    {
+        $table = new ImportTable(ClassName::fromString('App\ItemList'), self::FIXED, []);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('App\Unknown is neither imported nor an element class');
+        $table->name('App\Unknown');
     }
 
     public function testGlobalCollection(): void

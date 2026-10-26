@@ -18,36 +18,36 @@ use Traversable;
 final class TypeShapeTest extends TestCase
 {
     /**
-     * @return iterable<string, array{ElementType<mixed>, string, ?string, ?string, string, string, list<string>}>
+     * @return iterable<string, array{ElementType<mixed>, string, string, string, string, list<string>}>
      */
     public static function shapes(): iterable
     {
-        // type, native T, ?T without DNF, ?T with DNF, PHPDoc T, PHPDoc ?T, classes
-        yield 'int' => [ElementType::integer(), 'int', '?int', '?int', 'int', 'int|null', []];
-        yield 'bool' => [ElementType::boolean(), 'bool', '?bool', '?bool', 'bool', 'bool|null', []];
-        yield 'nullable int' => [ElementType::integer()->nullable(), '?int', '?int', '?int', 'int|null', 'int|null', []];
-        yield 'float|int' => [ElementType::parse('float|int'), 'float|int', 'float|int|null', 'float|int|null', 'float|int', 'float|int|null', []];
-        yield 'class' => [ElementType::ofClass(Item::class), '~Item', '?~Item', '?~Item', '~Item', '~Item|null', [Item::class]];
-        yield 'nullable class' => [ElementType::ofClass(Item::class)->nullable(), '?~Item', '?~Item', '?~Item', '~Item|null', '~Item|null', [Item::class]];
+        // type, native T, native ?T, PHPDoc T, PHPDoc ?T, classes
+        yield 'int' => [ElementType::integer(), 'int', '?int', 'int', 'int|null', []];
+        yield 'bool' => [ElementType::boolean(), 'bool', '?bool', 'bool', 'bool|null', []];
+        yield 'nullable int' => [ElementType::integer()->nullable(), '?int', '?int', 'int|null', 'int|null', []];
+        yield 'float|int' => [ElementType::parse('float|int'), 'float|int', 'float|int|null', 'float|int', 'float|int|null', []];
+        yield 'class' => [ElementType::ofClass(Item::class), '~Item', '?~Item', '~Item', '~Item|null', [Item::class]];
+        yield 'nullable class' => [ElementType::ofClass(Item::class)->nullable(), '?~Item', '?~Item', '~Item|null', '~Item|null', [Item::class]];
         yield 'union' => [
             ElementType::union(ElementType::ofClass(Cat::class), ElementType::ofClass(Dog::class)),
-            '~Cat|~Dog', '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog', '~Cat|~Dog|null', [Cat::class, Dog::class],
+            '~Cat|~Dog', '~Cat|~Dog|null', '~Cat|~Dog', '~Cat|~Dog|null', [Cat::class, Dog::class],
         ];
         yield 'nullable union' => [
             ElementType::parse(Cat::class . '|' . Dog::class . '|null'),
-            '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog|null', [Cat::class, Dog::class],
+            '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog|null', '~Cat|~Dog|null', [Cat::class, Dog::class],
         ];
         yield 'scalar and class' => [
             ElementType::parse('int|' . Item::class),
-            'int|~Item', 'int|~Item|null', 'int|~Item|null', 'int|~Item', 'int|~Item|null', [Item::class],
+            'int|~Item', 'int|~Item|null', 'int|~Item', 'int|~Item|null', [Item::class],
         ];
         yield 'intersection' => [
             ElementType::intersection(Countable::class, Traversable::class),
-            '~Countable&~Traversable', null, '(~Countable&~Traversable)|null', '~Countable&~Traversable', '(~Countable&~Traversable)|null', [Countable::class, Traversable::class],
+            '~Countable&~Traversable', '(~Countable&~Traversable)|null', '~Countable&~Traversable', '(~Countable&~Traversable)|null', [Countable::class, Traversable::class],
         ];
         yield 'nullable intersection' => [
             ElementType::intersection(Countable::class, Traversable::class)->nullable(),
-            '(~Countable&~Traversable)|null', null, '(~Countable&~Traversable)|null',
+            '(~Countable&~Traversable)|null', '(~Countable&~Traversable)|null',
             '(~Countable&~Traversable)|null', '(~Countable&~Traversable)|null', [Countable::class, Traversable::class],
         ];
     }
@@ -57,14 +57,13 @@ final class TypeShapeTest extends TestCase
      * @param list<string> $classes
      */
     #[DataProvider('shapes')]
-    public function testRendering(ElementType $type, string $native, ?string $nullableWithoutDnf, ?string $nullableWithDnf, string $phpDoc, string $nullablePhpDoc, array $classes): void
+    public function testRendering(ElementType $type, string $native, string $nullable, string $phpDoc, string $nullablePhpDoc, array $classes): void
     {
         $shape = TypeShape::of($type);
         $name = $this->shortName();
 
         self::assertSame($native, $shape->native($name));
-        self::assertSame($nullableWithoutDnf, $shape->nullableNative($name, false));
-        self::assertSame($nullableWithDnf, $shape->nullableNative($name, true));
+        self::assertSame($nullable, $shape->nullableNative($name));
         self::assertSame($phpDoc, $shape->phpDoc($name));
         self::assertSame($nullablePhpDoc, $shape->nullablePhpDoc($name));
         self::assertSame($classes, $shape->classes());

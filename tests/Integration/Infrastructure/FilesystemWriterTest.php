@@ -8,6 +8,7 @@ use LogicException;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\FileChange;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Port\WriteFailed;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Writer\FilesystemWriter;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\TestCase;
@@ -45,7 +46,9 @@ final class FilesystemWriterTest extends TestCase
         $replan = $writer->plan($this->manifest, $files);
         self::assertSame([['unchanged', 'src/ItemList.php'], ['unchanged', 'src/Deep/TagList.php']], $this->changes($replan));
         self::assertTrue($replan->isUpToDate());
-        self::assertSame([], glob($this->directory->path . '/src/{,*/}.*.tmp', GLOB_BRACE));
+        self::assertSame([], glob($this->directory->path . '/src/{,*/}.dto-collection-generator-tmp-*', GLOB_BRACE));
+        // umask decides, as for any file PHP creates: tempnam()'s 0600 would hide the class from other users.
+        self::assertSame(0o666 & ~umask(), fileperms($this->directory->path . '/src/ItemList.php') & 0o777);
     }
 
     public function testManifest(): void
@@ -60,6 +63,19 @@ final class FilesystemWriterTest extends TestCase
             . '        "src/ItemList.php": "' . hash('sha256', self::HEADER . 'one') . "\"\n    }\n}\n",
             file_get_contents($this->manifest),
         );
+    }
+
+    public function testUnchangedFilesAreNotRewritten(): void
+    {
+        $writer = new FilesystemWriter();
+        $files = [$this->file('src/ItemList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+        touch($this->directory->path . '/src/ItemList.php', 1_000_000_000);
+
+        $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+
+        clearstatcache();
+        self::assertSame(1_000_000_000, filemtime($this->directory->path . '/src/ItemList.php'));
     }
 
     public function testUpdate(): void
@@ -144,9 +160,9 @@ final class FilesystemWriterTest extends TestCase
 
     public function testPathsDifferingOnlyInCase(): void
     {
-        $plan = (new FilesystemWriter())->plan($this->manifest, [$this->file('src/ItemList.php', 'one'), $this->file('src/itemlist.php', 'two')]);
+        $plan = (new FilesystemWriter())->plan($this->manifest, [$this->file('src/ItemList.php', 'one'), $this->file('src/itemlist.php', 'two'), $this->file('src/TagList.php', 'three')]);
 
-        self::assertSame([['create', 'src/ItemList.php'], ['conflict', 'src/itemlist.php']], $this->changes($plan));
+        self::assertSame([['create', 'src/ItemList.php'], ['conflict', 'src/itemlist.php'], ['create', 'src/TagList.php']], $this->changes($plan));
         self::assertSame('its path differs from src/ItemList.php only in letter case, which case-insensitive file systems cannot hold', $plan->changes[1]->reason);
     }
 
@@ -199,6 +215,140 @@ final class FilesystemWriterTest extends TestCase
             }
         } finally {
             $outside->remove();
+        }
+    }
+
+    public function testOnlyGeneratedStaleFilesAreDeleted(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/A.php', 'a'), $this->file('src/B.php', 'b')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        $this->directory->write('src/A.php', "<?php\n\nfinal class A {}\n");
+        file_put_contents($this->manifest, str_replace(hash('sha256', self::HEADER . 'a'), hash('sha256', "<?php\n\nfinal class A {}\n"), (string) file_get_contents($this->manifest)));
+
+        self::assertSame([['delete', 'src/B.php']], $this->changes($writer->plan($this->manifest, [])));
+    }
+
+    public function testAnInterruptedRunLeavesEveryFileInTheManifest(): void
+    {
+        $writer = new FilesystemWriter();
+        $old = [$this->file('src/Old.php', 'old')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        $this->directory->write('blocker', 'a file where a directory should be');
+        $new = [$this->file('src/New.php', 'new'), $this->file('blocker/Item.php', 'blocked')];
+
+        try {
+            $writer->apply($writer->plan($this->manifest, $new), $this->manifest, $new);
+            self::fail('The write into a file did not fail');
+        } catch (WriteFailed $exception) {
+            self::assertSame('Cannot create the directory ' . $this->directory->path . '/blocker', $exception->getMessage());
+        }
+
+        $manifest = json_decode((string) file_get_contents($this->manifest), true, flags: JSON_THROW_ON_ERROR);
+        self::assertIsArray($manifest);
+        self::assertSame(['blocker/Item.php', 'src/New.php', 'src/Old.php'], array_keys((array) $manifest['files']));
+    }
+
+    public function testApplyRefusesFilesThePlanWasNotMadeFor(): void
+    {
+        $writer = new FilesystemWriter();
+        $plan = $writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')]);
+
+        $this->expectException(LogicException::class);
+        $this->expectExceptionMessage('The plan names a file it was not made for: ' . $this->directory->path . '/src/ItemList.php');
+        $writer->apply($plan, $this->manifest, []);
+    }
+
+    public function testManifestWithoutFilesCountsAsEmpty(): void
+    {
+        file_put_contents($this->manifest, '{"generator": "msstc4php/dto-collection-generator"}');
+
+        self::assertFalse((new FilesystemWriter())->plan($this->manifest, [])->manifestOutdated);
+    }
+
+    public function testManifestOrderDoesNotMatter(): void
+    {
+        $writer = new FilesystemWriter();
+        $files = [$this->file('src/A.php', 'a'), $this->file('src/B.php', 'b')];
+        $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+        file_put_contents($this->manifest, json_encode(['files' => [
+            'src/B.php' => hash('sha256', self::HEADER . 'b'),
+            'src/A.php' => hash('sha256', self::HEADER . 'a'),
+        ]], JSON_THROW_ON_ERROR));
+
+        self::assertTrue($writer->plan($this->manifest, $files)->isUpToDate());
+    }
+
+    public function testManifestKeysAreSortedAsWritten(): void
+    {
+        $root = new TemporaryDirectory();
+        $manifest = $root->write('b-project/.dto-collection-generator.manifest.json', '');
+        unlink($manifest);
+        $files = [new GeneratedFile($root->path . '/b-project/a.php', self::HEADER), new GeneratedFile($root->path . '/c-outside/X.php', self::HEADER)];
+        $writer = new FilesystemWriter();
+
+        try {
+            $writer->apply($writer->plan($manifest, $files), $manifest, $files);
+            $written = json_decode((string) file_get_contents($manifest), true, flags: JSON_THROW_ON_ERROR);
+            self::assertIsArray($written);
+            self::assertSame([$root->path . '/c-outside/X.php', 'a.php'], array_keys((array) $written['files']));
+        } finally {
+            $root->remove();
+        }
+    }
+
+    public function testEmptyManifestIsAnObject(): void
+    {
+        $writer = new FilesystemWriter();
+        $writer->apply($writer->plan($this->manifest, []), $this->manifest, []);
+
+        self::assertSame("{\n    \"generator\": \"msstc4php/dto-collection-generator\",\n    \"files\": {}\n}\n", file_get_contents($this->manifest));
+    }
+
+    public function testManifestKeepsUnicodePaths(): void
+    {
+        $writer = new FilesystemWriter();
+        $files = [$this->file('src/Ünicode.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+
+        self::assertStringContainsString('"src/Ünicode.php"', (string) file_get_contents($this->manifest));
+    }
+
+    public function testDeleteFailure(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('root can delete any file');
+        }
+        $writer = new FilesystemWriter();
+        $old = [$this->file('locked/ItemList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        chmod($this->directory->path . '/locked', 0o555);
+
+        try {
+            $this->expectException(WriteFailed::class);
+            $this->expectExceptionMessage('Cannot delete ' . $this->directory->path . '/locked/ItemList.php');
+            $writer->apply($writer->plan($this->manifest, []), $this->manifest, []);
+        } finally {
+            chmod($this->directory->path . '/locked', 0o755);
+        }
+    }
+
+    public function testWriteFailure(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('root can write anywhere');
+        }
+        $this->directory->write('locked/.keep', '');
+        chmod($this->directory->path . '/locked', 0o555);
+        $files = [$this->file('locked/ItemList.php', 'one')];
+        $writer = new FilesystemWriter();
+
+        try {
+            $this->expectException(WriteFailed::class);
+            $this->expectExceptionMessage('Cannot write ' . $this->directory->path . '/locked/ItemList.php');
+            $writer->apply($writer->plan($this->manifest, $files), $this->manifest, $files);
+        } finally {
+            chmod($this->directory->path . '/locked', 0o755);
         }
     }
 

@@ -131,7 +131,7 @@ final class RawSection
     }
 
     /**
-     * @return array<string, string>
+     * @return array<array-key, string> a numeric key comes back as an int, as PHP stores it
      */
     public function stringMap(string $key): array
     {
@@ -143,7 +143,7 @@ final class RawSection
 
                 continue;
             }
-            $strings[(string) $entry] = $item;
+            $strings[$entry] = $item;
         }
 
         return $strings;

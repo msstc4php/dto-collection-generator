@@ -110,10 +110,13 @@ final class GenerateTest extends TestCase
 
     public function testClassOutsideEveryPrefix(): void
     {
-        $output = $this->generate($this->config(), source: new InMemorySpecSource([$this->spec('Other\ItemList')]));
+        $output = $this->generate($this->config(), source: new InMemorySpecSource([$this->spec('Other\ItemList'), $this->spec('Other\TagList')]));
 
         self::assertSame(Status::GenerationFailed, $output->status);
-        self::assertSame(['error /project/src/Item.php:5: Other\ItemList: no namespace prefix in "paths" or in the PSR-4 autoload of composer.json covers it; add one to "paths"'], $this->messages($output));
+        self::assertSame([
+            'error /project/src/Item.php:5: Other\ItemList: no namespace prefix in "paths" or in the PSR-4 autoload of composer.json covers it; add one to "paths"',
+            'error /project/src/Item.php:5: Other\TagList: no namespace prefix in "paths" or in the PSR-4 autoload of composer.json covers it; add one to "paths"',
+        ], $this->messages($output));
         self::assertNull($output->plan);
     }
 

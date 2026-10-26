@@ -7,7 +7,6 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Emitter;
 use Closure;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\Selectable;
-use LogicException;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\Behaviour\ImmutableListBehaviour;
 use MSSTC4PHP\DtoCollection\Behaviour\MutableListBehaviour;
@@ -48,15 +47,17 @@ final class StringCodeEmitter implements CodeEmitter
         $shape = TypeShape::of($spec->elementType);
         $odm = $spec->variant === Variant::Odm;
         $override = $target->supports(Capability::OverrideAttribute);
-        $dnf = $target->supports(Capability::DnfTypes);
-        $comparators = array_values(array_filter(
-            $shape->branches,
-            static fn (string|array $branch): bool => is_array($branch) && count($branch) === 1 && $facts->isEquatable($branch[0]),
-        ));
-        $behaviours = array_values(array_filter([
+        // As EqualityResolver: a comparator per single-class branch whose class is Equatable, in branch order.
+        $comparators = [];
+        foreach ($shape->branches as $branch) {
+            if (is_array($branch) && count($branch) === 1 && $facts->isEquatable($branch[0])) {
+                $comparators[] = $branch[0];
+            }
+        }
+        $behaviours = array_filter([
             $spec->elementType->isNumeric() ? NumericBehaviour::class : null,
             $spec->elementType->isString() ? TextBehaviour::class : null,
-        ]));
+        ]);
         $variantTrait = match ($spec->variant) {
             Variant::Immutable => ImmutableListBehaviour::class,
             Variant::Mutable => MutableListBehaviour::class,
@@ -117,7 +118,7 @@ final class StringCodeEmitter implements CodeEmitter
 
         foreach (MethodCatalogue::for($spec->variant) as $method) {
             $lines[] = '';
-            array_push($lines, ...$this->method($method, $shape, $name, $dnf, $override, $odm));
+            array_push($lines, ...$this->method($method, $shape, $name, $override, $odm));
         }
 
         $lines[] = '';
@@ -143,7 +144,7 @@ final class StringCodeEmitter implements CodeEmitter
      *
      * @return list<string>
      */
-    private function method(MethodTemplate $method, TypeShape $shape, Closure $name, bool $dnf, bool $override, bool $odm): array
+    private function method(MethodTemplate $method, TypeShape $shape, Closure $name, bool $override, bool $odm): array
     {
         $lines = [];
         if ($method->phpDoc !== []) {
@@ -170,7 +171,7 @@ final class StringCodeEmitter implements CodeEmitter
             $method->static ? 'static ' : '',
             $method->name,
             implode(', ', $parameters),
-            $this->returnType($method, $shape, $name, $dnf),
+            $this->returnType($method, $shape, $name),
         );
         $lines[] = self::INDENT . '{';
         $lines[] = self::INDENT . self::INDENT . $this->body($method, $odm);
@@ -194,11 +195,11 @@ final class StringCodeEmitter implements CodeEmitter
     /**
      * @param Closure(string): string $name
      */
-    private function returnType(MethodTemplate $method, TypeShape $shape, Closure $name, bool $dnf): string
+    private function returnType(MethodTemplate $method, TypeShape $shape, Closure $name): string
     {
         return match ($method->returns) {
             'T' => $shape->native($name),
-            '?T' => $shape->nullableNative($name, $dnf) ?? throw new LogicException('An intersection element type needs DNF types; the validator rejects it below PHP 8.2'),
+            '?T' => $shape->nullableNative($name),
             default => $method->returns,
         };
     }
@@ -243,21 +244,17 @@ final class StringCodeEmitter implements CodeEmitter
     }
 
     /**
-     * @param list<string|non-empty-list<string>> $comparators single-class branches whose class is Equatable
+     * @param list<string> $comparators the Equatable classes
      * @param Closure(string): string $name
      */
     private function equalityExpression(array $comparators, Closure $name): string
     {
-        if ($comparators === []) {
-            return sprintf('new %s()', $name(StrictEquality::class));
-        }
-        $expression = '';
-        foreach ($comparators as $index => $branch) {
-            $class = $name(((array) $branch)[0]);
-            $comparator = sprintf('%s::class, static fn (%s $left, %s $right): bool => $left->equals($right)', $class, $class, $class);
-            $expression .= $index === 0 ? sprintf('%s::of(%s)', $name(ComparatorEquality::class), $comparator) : sprintf('->with(%s)', $comparator);
+        $expression = null;
+        foreach ($comparators as $class) {
+            $comparator = sprintf('%1$s::class, static fn (%1$s $left, %1$s $right): bool => $left->equals($right)', $name($class));
+            $expression = $expression === null ? sprintf('%s::of(%s)', $name(ComparatorEquality::class), $comparator) : $expression . sprintf('->with(%s)', $comparator);
         }
 
-        return $expression;
+        return $expression ?? sprintf('new %s()', $name(StrictEquality::class));
     }
 }

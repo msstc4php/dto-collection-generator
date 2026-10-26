@@ -13,6 +13,95 @@
         "json": "var/infection/infection.json"
     },
     "mutators": {
-        "@default": true
-    }
+        "@default": true,
+        // Closure::bind() of a static closure to a class that exists never returns null (as in dto-generator).
+        "TrueValue": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\ComposerPlugin::runsScripts",
+            ],
+        },
+        // Equivalent: two bounds that compare equal give the same lowest minor; a numeric string compares with an
+        // int as the int itself; preg_replace() returns null only for an invalid pattern, and this one is a literal.
+        "LessThan": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Target\\PhpConstraint::lowestMinor",
+            ],
+        },
+        "GreaterThan": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Target\\PhpConstraint::lowerBound",
+                // Two different prefixes that both start the class name never have the same length.
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Environment\\ComposerProjectLayout::place",
+            ],
+        },
+        "CastInt": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Target\\PhpConstraint::lowerBound",
+            ],
+        },
+        "CastString": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Target\\PhpConstraint::lowerBound",
+                // getcwd() fails only for a deleted working directory, where "" and false both end in "no config here".
+                "MSSTC4PHP\\DtoCollectionGenerator\\DtoCollectionGenerator::console",
+            ],
+        },
+        // Equivalent: the check only proves class-string to PHPStan; for a missing class the constructor throws, which
+        // ends in the same null.
+        "LogicalOrAllSubExprNegation": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Reflection\\ReflectionClassInspector::reflect",
+            ],
+        },
+        // Equivalent: a function that falls off its end returns null as well.
+        "ReturnRemoval": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Reflection\\ReflectionClassInspector::reflect",
+            ],
+        },
+        // Equivalent: the grouping parentheses only matter for an intersection, and this branch has none.
+        "FalseValue": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Domain\\Model\\TypeShape::withNull",
+            ],
+        },
+        // Only an unreadable composer.json tells it apart; ComposerProjectLayoutTest::testUnreadableComposerJson kills it
+        // in a plain run, but under Infection's stream interceptor the case does not reproduce.
+        "LogicalOr": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Environment\\ComposerProjectLayout::psr4",
+            ],
+        },
+        // Equivalent: is_array($data) only proves the type to PHPStan; ?? already turns any other value into [].
+        "LogicalAnd": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Environment\\ComposerProjectLayout::psr4",
+                // The iterator yields only SplFileInfo leaves (files); instanceof and isFile() prove types and skip links.
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Scanner\\AttributeSpecSource::files",
+            ],
+        },
+        // Equivalent: reflection and php-parser list a class's attributes alike, so the fallback line is never used.
+        "IncrementInteger": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Scanner\\AttributeSpecSource::read",
+                // The temporary name only has to be unique in its directory.
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Writer\\FilesystemWriter::write",
+            ],
+        },
+        "DecrementInteger": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Writer\\FilesystemWriter::write",
+            ],
+        },
+        "Concat": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Writer\\FilesystemWriter::write",
+            ],
+        },
+        "ConcatOperandRemoval": {
+            "ignore": [
+                "MSSTC4PHP\\DtoCollectionGenerator\\Infrastructure\\Writer\\FilesystemWriter::write",
+            ],
+        },
+    },
 }

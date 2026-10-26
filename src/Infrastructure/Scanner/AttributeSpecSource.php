@@ -44,8 +44,7 @@ final class AttributeSpecSource implements SpecSource
             try {
                 $candidates = $this->finder->find($code);
             } catch (Error $error) {
-                $line = $error->getStartLine();
-                $diagnostics->error('Cannot parse this file: ' . $error->getRawMessage(), Location::inFile($file, $line > 0 ? $line : null));
+                $diagnostics->error('Cannot parse this file: ' . $error->getRawMessage(), Location::inFile($file, $error->getStartLine()));
 
                 continue;
             }
@@ -69,7 +68,8 @@ final class AttributeSpecSource implements SpecSource
         $origin = Location::inFile($file, $lines[0]);
 
         try {
-            $exists = class_exists($class) || interface_exists($class) || trait_exists($class) || enum_exists($class);
+            // class_exists() covers enums.
+            $exists = class_exists($class) || interface_exists($class) || trait_exists($class);
         } catch (Throwable $exception) {
             $diagnostics->error(sprintf('Cannot load %s: %s', $class, $exception->getMessage()), $origin);
 
@@ -84,6 +84,7 @@ final class AttributeSpecSource implements SpecSource
         $specs = [];
         $marked = ClassName::fromString($class);
         foreach ((new ReflectionClass($class))->getAttributes(TypedCollection::class) as $index => $attribute) {
+            // Reflection and php-parser list the attributes in the same order.
             $location = Location::inFile($file, $lines[$index] ?? $lines[0]);
 
             try {
@@ -115,7 +116,7 @@ final class AttributeSpecSource implements SpecSource
                 }
             }
         }
-        $files = array_values(array_unique($files));
+        $files = array_unique($files);
         sort($files, SORT_STRING);
 
         return $files;

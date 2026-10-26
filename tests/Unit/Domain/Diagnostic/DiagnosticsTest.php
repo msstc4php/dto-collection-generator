@@ -24,6 +24,16 @@ final class DiagnosticsTest extends TestCase
         self::assertCount(2, $diagnostics->errors());
     }
 
+    public function testTheFirstOfTwoEqualDiagnosticsIsKept(): void
+    {
+        $first = Location::inFile('/project/src/Item.php', 12);
+        $diagnostics = new Diagnostics();
+        $diagnostics->error('Broken', $first);
+        $diagnostics->error('Broken', Location::inFile('/project/src/Item.php', 12));
+
+        self::assertSame($first, $diagnostics->all()[0]->location);
+    }
+
     public function testWarningsAloneAreNoErrors(): void
     {
         $diagnostics = new Diagnostics();
@@ -33,8 +43,11 @@ final class DiagnosticsTest extends TestCase
         self::assertFalse($diagnostics->hasErrors());
         self::assertSame([], $diagnostics->errors());
 
-        $diagnostics->error('Broken', Location::inConfig('/project/dto-collection-generator.yaml', '/version'));
+        $error = Location::inConfig('/project/dto-collection-generator.yaml', '/version');
+        $diagnostics->error('Broken', $error);
         self::assertTrue($diagnostics->hasErrors());
+        self::assertSame([0], array_keys($diagnostics->errors()));
+        self::assertSame($error, $diagnostics->errors()[0]->location);
     }
 
     public function testMergeKeepsTheOrder(): void
@@ -48,7 +61,9 @@ final class DiagnosticsTest extends TestCase
         $second->error('three', Location::inFile('/c.php'));
 
         $first->merge($second);
+        $first->warning('two', Location::inConfig('/b.php', ''));
 
+        self::assertSame([0, 1, 2], array_keys($first->all()));
         self::assertSame(['one', 'two', 'three'], array_map(
             static fn (Diagnostic $diagnostic): string => $diagnostic->message,
             $first->all(),

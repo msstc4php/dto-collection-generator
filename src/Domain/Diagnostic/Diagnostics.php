@@ -15,11 +15,8 @@ use IteratorAggregate;
  */
 final class Diagnostics implements Countable, IteratorAggregate
 {
-    /** @var list<Diagnostic> */
+    /** @var array<string, Diagnostic> by what makes two diagnostics the same */
     private array $items = [];
-
-    /** @var array<string, true> */
-    private array $seen = [];
 
     public function error(string $message, Location $location): void
     {
@@ -48,7 +45,7 @@ final class Diagnostics implements Countable, IteratorAggregate
      */
     public function all(): array
     {
-        return $this->items;
+        return array_values($this->items);
     }
 
     /**
@@ -57,7 +54,7 @@ final class Diagnostics implements Countable, IteratorAggregate
     public function errors(): array
     {
         return array_values(array_filter(
-            $this->items,
+            $this->all(),
             static fn (Diagnostic $diagnostic): bool => $diagnostic->severity === Severity::Error,
         ));
     }
@@ -72,17 +69,12 @@ final class Diagnostics implements Countable, IteratorAggregate
      */
     public function getIterator(): ArrayIterator
     {
-        return new ArrayIterator($this->items);
+        return new ArrayIterator($this->all());
     }
 
     private function add(Diagnostic $diagnostic): void
     {
         $location = $diagnostic->location;
-        $key = implode("\0", [$diagnostic->severity->value, $diagnostic->message, $location->path, (string) $location->line, (string) $location->pointer]);
-        if (isset($this->seen[$key])) {
-            return;
-        }
-        $this->seen[$key] = true;
-        $this->items[] = $diagnostic;
+        $this->items[implode("\0", [$diagnostic->severity->value, $diagnostic->message, $location->path, $location->line, $location->pointer])] ??= $diagnostic;
     }
 }

@@ -38,6 +38,7 @@ final class AttributeSpecSourceTest extends TestCase
             $spec->origin->render($root),
         ], $specs));
         self::assertSame([
+            'Labelled.php:10: Invalid element type "MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Projects\Scan\Labelled": class or interface "MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Projects\Scan\Labelled" does not exist',
             "Syntax.php:10: Cannot parse this file: Syntax error, unexpected T_CLASS, expecting ':'",
             'Thrower.php:11: The collection class name must not be empty',
             'Unloadable.php:10: Cannot load MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Projects\Scan\Unloadable: Class "MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Projects\Scan\MissingParent" not found',
@@ -73,6 +74,15 @@ final class Elsewhere {}
             'Elsewhere.php:4: Outside\Elsewhere cannot be autoloaded; add its directory to the autoload section of composer.json',
             $diagnostics->all()[0]->location->render($directory) . ': ' . $diagnostics->all()[0]->message,
         );
+    }
+
+    public function testEveryDirectoryIsScannedOnce(): void
+    {
+        $root = (string) realpath(self::SCAN);
+        $once = (new AttributeSpecSource())->specs([$root], new Diagnostics());
+
+        self::assertCount(4, $once);
+        self::assertEquals($once, (new AttributeSpecSource())->specs([$root . '/missing', $root, $root . '/Nested'], new Diagnostics()));
     }
 
     public function testMissingDirectoryGivesNothing(): void

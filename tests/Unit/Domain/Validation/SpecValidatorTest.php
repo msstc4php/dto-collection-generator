@@ -148,7 +148,8 @@ final class SpecValidatorTest extends TestCase
     public function testOdmWithScalarBranch(): void
     {
         $diagnostics = new Diagnostics();
-        $type = ElementType::union(ElementType::integer(), ElementType::ofClass(Pet::class));
+        // Tag has no ODM mapping: the scalar error must be the only message.
+        $type = ElementType::union(ElementType::integer(), ElementType::ofClass(Tag::class));
 
         self::assertSame([], $this->validate([$this->spec('App\MixedCollection', $type, Variant::Odm, marked: null)], $diagnostics));
         self::assertSame(['error 1: App\MixedCollection: an ODM collection holds documents; int is not one'], $this->messages($diagnostics));

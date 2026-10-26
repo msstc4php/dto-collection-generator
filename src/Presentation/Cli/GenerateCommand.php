@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Presentation\Cli;
 
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\ChangeKind;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\FileChange;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Generate;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Input;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Mode;
@@ -134,13 +135,17 @@ final class GenerateCommand extends Command
                 $output->writeln($line, OutputInterface::OUTPUT_RAW);
             }
         }
-        $plan = $result->plan;
         $output->writeln(sprintf(
             $mode === Mode::DryRun ? 'Would write: %d, delete: %d, unchanged: %d.' : 'Written: %d, deleted: %d, unchanged: %d.',
-            (int) $plan?->count(ChangeKind::Create) + (int) $plan?->count(ChangeKind::Update),
-            (int) $plan?->count(ChangeKind::Delete),
-            (int) $plan?->count(ChangeKind::Unchanged),
+            $this->count($result, ChangeKind::Create, ChangeKind::Update),
+            $this->count($result, ChangeKind::Delete),
+            $this->count($result, ChangeKind::Unchanged),
         ));
+    }
+
+    private function count(Output $result, ChangeKind ...$kinds): int
+    {
+        return count(array_filter($result->plan->changes ?? [], static fn (FileChange $change): bool => in_array($change->kind, $kinds, true)));
     }
 
     /**

@@ -31,6 +31,7 @@ return RectorConfig::configure()
         // Deliberately broken fixtures: the generator must report them.
         __DIR__ . '/tests/Fixtures/Model/Broken.php',
         __DIR__ . '/tests/Fixtures/Projects/Scan/Syntax.php',
+        __DIR__ . '/tests/Fixtures/Projects/Scan/Unparsable.php',
         __DIR__ . '/tests/Fixtures/Projects/Scan/Unloadable.php',
         __DIR__ . '/tests/Targets',
         NewlineAfterStatementRector::class,

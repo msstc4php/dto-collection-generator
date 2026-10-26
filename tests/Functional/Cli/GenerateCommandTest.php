@@ -95,6 +95,19 @@ final class GenerateCommandTest extends TestCase
         ], json_decode($tester->getDisplay(), true, 512, JSON_THROW_ON_ERROR));
     }
 
+    public function testJsonReportOfAFailure(): void
+    {
+        file_put_contents($this->project->path('dto-collection-generator.yaml'), "version: 2\n");
+        $tester = $this->tester();
+
+        self::assertSame(3, $tester->execute(['--format' => 'json'], self::SEPARATE_STDERR));
+        self::assertSame(
+            ['status' => 'config-failed', 'diagnostics' => [['severity' => 'error', 'location' => 'dto-collection-generator.yaml#/version', 'message' => '"version" must be 1.']], 'changes' => []],
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
+        self::assertSame('', $tester->getErrorOutput());
+    }
+
     public function testBrokenConfig(): void
     {
         file_put_contents($this->project->path('dto-collection-generator.yaml'), "version: 2\n");
@@ -102,6 +115,7 @@ final class GenerateCommandTest extends TestCase
 
         self::assertSame(3, $tester->execute([], self::SEPARATE_STDERR));
         self::assertSame("error dto-collection-generator.yaml#/version: \"version\" must be 1.\nConfiguration failed: 1 error(s).\n", $tester->getErrorOutput());
+        self::assertSame('', $tester->getDisplay());
     }
 
     public function testInvalidSpec(): void
@@ -128,7 +142,10 @@ final class GenerateCommandTest extends TestCase
 
         $tester = $this->tester();
         self::assertSame(3, $tester->execute(['--format' => 'json', '--check' => true, '--dry-run' => true], self::SEPARATE_STDERR));
-        self::assertSame('config-failed', $this->reportStatus($tester->getDisplay()));
+        self::assertSame(
+            ['status' => 'config-failed', 'diagnostics' => [['severity' => 'error', 'location' => '', 'message' => '--check and --dry-run cannot be combined.']], 'changes' => []],
+            json_decode($tester->getDisplay(), true, flags: JSON_THROW_ON_ERROR),
+        );
     }
 
     public function testFindsTheJsonConfigAndExplainsAMissingOne(): void

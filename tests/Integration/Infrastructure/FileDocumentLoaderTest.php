@@ -43,8 +43,8 @@ final class FileDocumentLoaderTest extends TestCase
      */
     public static function failures(): iterable
     {
-        yield 'malformed yaml' => ['config.yaml', "version: [1\n", 'is not valid YAML: '];
-        yield 'malformed json' => ['config.json', '{"version": ', 'is not valid JSON: '];
+        yield 'malformed yaml' => ['config.yaml', "version: [1\n", 'is not valid YAML: Malformed inline YAML string'];
+        yield 'malformed json' => ['config.json', '{"version": ', 'is not valid JSON: Syntax error'];
         yield 'yaml scalar' => ['config.yaml', "just text\n", 'must contain an object'];
         yield 'json list' => ['config.json', '[1, 2]', 'must contain an object'];
         yield 'empty yaml' => ['config.yaml', '', 'must contain an object'];
@@ -60,6 +60,30 @@ final class FileDocumentLoaderTest extends TestCase
         $this->expectExceptionMessage($path . ' ' . $problem);
 
         (new FileDocumentLoader())->load($path);
+    }
+
+    public function testExtensionIgnoresCase(): void
+    {
+        $path = $this->directory->write('CONFIG.YAML', "version: 1\n");
+
+        self::assertSame(['version' => 1], (new FileDocumentLoader())->load($path));
+    }
+
+    public function testUnreadableFile(): void
+    {
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('root can read any file');
+        }
+        $path = $this->directory->write('config.yaml', "version: 1\n");
+        chmod($path, 0o000);
+
+        try {
+            $this->expectException(DocumentNotLoaded::class);
+            $this->expectExceptionMessage($path . ' cannot be read');
+            (new FileDocumentLoader())->load($path);
+        } finally {
+            chmod($path, 0o644);
+        }
     }
 
     public function testMissingFile(): void

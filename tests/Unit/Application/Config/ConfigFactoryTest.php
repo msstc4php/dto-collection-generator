@@ -102,6 +102,11 @@ final class ConfigFactoryTest extends TestCase
         yield 'paths not an object' => [['version' => 1, 'paths' => ['src']], 'error #/paths: "paths" must be an object.'];
         yield 'path prefix without separator' => [['version' => 1, 'paths' => ['App' => 'src']], 'error #/paths/App: A namespace prefix ends with "\"; write "App\".'];
         yield 'path prefix not a namespace' => [['version' => 1, 'paths' => ['1App\\' => 'src']], 'error #/paths/1App\: "1App\" is not a namespace prefix.'];
+        yield 'numeric path prefix' => [['version' => 1, 'paths' => ['1' => 'src']], 'error #/paths/1: A namespace prefix ends with "\"; write "1\".'];
+        yield 'escaped pointer' => [['version' => 1, 'paths' => ['a/b~' => 'src']], 'error #/paths/a~1b~0: A namespace prefix ends with "\"; write "a/b~\".'];
+        yield 'class not a string' => [['version' => 1, 'collections' => [self::collection(['class' => 5])]], 'error #/collections/0/class: "class" must be a non-empty string.'];
+        yield 'empty class' => [['version' => 1, 'collections' => [self::collection(['class' => ''])]], 'error #/collections/0/class: "class" must be a non-empty string.'];
+        yield 'collection is a list' => [['version' => 1, 'collections' => [['A', 'B']]], 'error #/collections/0: Expected an object.'];
         yield 'empty path' => [['version' => 1, 'paths' => ['App\\' => '']], 'error #/paths/App\: Expected a non-empty string.'];
     }
 
@@ -115,6 +120,32 @@ final class ConfigFactoryTest extends TestCase
 
         self::assertNull(ConfigFactory::create($raw, self::CONFIG, $diagnostics));
         self::assertSame([$expected], $this->messages($diagnostics));
+    }
+
+    public function testEveryEntryOfAListIsChecked(): void
+    {
+        $diagnostics = new Diagnostics();
+        ConfigFactory::create([
+            'version' => 1,
+            'sources' => ['', ''],
+            'collections' => ['A', 'B', []],
+            'paths' => ['App' => '', 'Other' => 'src', 'Third' => 'src', '1A\\' => 'src', '2B\\' => 'src'],
+        ], self::CONFIG, $diagnostics);
+
+        self::assertSame([
+            'error #/sources/0: Expected a non-empty string.',
+            'error #/sources/1: Expected a non-empty string.',
+            'error #/collections/0: Expected an object.',
+            'error #/collections/1: Expected an object.',
+            'error #/collections/2: "class" is required.',
+            'error #/collections/2: "variant" is required.',
+            'error #/collections/2: "elementType" is required.',
+            'error #/paths/App: Expected a non-empty string.',
+            'error #/paths/Other: A namespace prefix ends with "\"; write "Other\".',
+            'error #/paths/Third: A namespace prefix ends with "\"; write "Third\".',
+            'error #/paths/1A\\: "1A\\" is not a namespace prefix.',
+            'error #/paths/2B\\: "2B\\" is not a namespace prefix.',
+        ], $this->messages($diagnostics));
     }
 
     public function testEveryMistakeIsReportedInOneRun(): void

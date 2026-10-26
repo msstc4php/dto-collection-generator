@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Domain\Spec;
 
+use InvalidArgumentException;
 use MSSTC4PHP\DtoCollection\Attribute\TypedCollection;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
@@ -55,6 +56,14 @@ final class CollectionSpecTest extends TestCase
 
         self::assertTrue($spec->elementType->equals(ElementType::integer()));
         self::assertNull($spec->markedClass);
+    }
+
+    public function testNeedsAnElementTypeOrAMarkedClass(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('A collection spec without a marked class needs an element type');
+
+        CollectionSpec::fromAttribute(new TypedCollection('App\IntegerList', Variant::Immutable), null, Location::inFile('/project/a.php'));
     }
 
     public function testAlreadyNullableStaysNullable(): void

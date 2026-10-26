@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Emitter;
 
+use LogicException;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassName;
 
 /**
@@ -18,7 +19,7 @@ final class ImportTable
     private array $names = [];
 
     /** @var list<string> */
-    private readonly array $imports;
+    private array $imports = [];
 
     /**
      * @param list<string> $fixed the imports every file of this shape has
@@ -26,36 +27,45 @@ final class ImportTable
      */
     public function __construct(ClassName $collection, array $fixed, array $elements)
     {
-        $imports = $fixed;
-        $reserved = [strtolower($collection->shortName()) => true];
+        $own = strtolower($collection->shortName());
+        $taken = [$own];
         foreach ($fixed as $class) {
-            $reserved[strtolower(self::shortName($class))] = true;
-            $this->names[strtolower($class)] = self::shortName($class);
+            // A class may not import a name equal to its own: the collection's name wins, the import is qualified.
+            if (strtolower($this->shortName($class)) === $own) {
+                $this->names[strtolower($class)] = '\\' . $class;
+
+                continue;
+            }
+            $taken[] = strtolower($this->shortName($class));
+            $this->names[strtolower($class)] = $this->shortName($class);
+            $this->imports[] = $class;
         }
-        $shortNames = array_count_values(array_map(static fn (string $class): string => strtolower(self::shortName($class)), array_values(array_unique(array_map(strtolower(...), $elements)))));
+        $counts = [];
+        foreach (array_unique(array_map(strtolower(...), $elements)) as $class) {
+            $short = $this->shortName($class);
+            $counts[$short] = ($counts[$short] ?? 0) + 1;
+        }
         foreach ($elements as $class) {
             $key = strtolower($class);
             if (isset($this->names[$key])) {
                 continue;
             }
-            $short = self::shortName($class);
-            $ambiguous = isset($reserved[strtolower($short)]) || $shortNames[strtolower($short)] > 1;
-            if (!str_contains($class, '\\') || $ambiguous) {
+            $short = $this->shortName($class);
+            if (!str_contains($class, '\\') || in_array(strtolower($short), $taken, true) || $counts[strtolower($short)] > 1) {
                 $this->names[$key] = '\\' . $class;
-            } elseif (strcasecmp($this->namespaceOf($class), $collection->namespace()) === 0) {
-                $this->names[$key] = $short;
             } else {
                 $this->names[$key] = $short;
-                $imports[] = $class;
+                if (strcasecmp(self::namespaceOf($class), $collection->namespace()) !== 0) {
+                    $this->imports[] = $class;
+                }
             }
         }
-        usort($imports, strcasecmp(...));
-        $this->imports = $imports;
+        usort($this->imports, strcasecmp(...));
     }
 
     public function name(string $class): string
     {
-        return $this->names[strtolower($class)] ?? '\\' . $class;
+        return $this->names[strtolower($class)] ?? throw new LogicException(sprintf('%s is neither imported nor an element class', $class));
     }
 
     /**
@@ -66,7 +76,7 @@ final class ImportTable
         return $this->imports;
     }
 
-    private static function shortName(string $class): string
+    private function shortName(string $class): string
     {
         $separator = strrpos($class, '\\');
 

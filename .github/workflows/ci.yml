@@ -39,7 +39,7 @@ jobs:
           composer config platform --unset
           composer update --no-interaction --no-progress ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
       - name: Lint sources with this PHP
-        run: find src tests -name '*.php' -not -path 'tests/Fixtures/Projects/Scan/Syntax.php' -print0 | xargs -0 -n1 php -l > /dev/null
+        run: find src tests -name '*.php' -not -path 'tests/Fixtures/Projects/Scan/Syntax.php' -not -path 'tests/Fixtures/Projects/Scan/Unparsable.php' -print0 | xargs -0 -n1 php -l > /dev/null
       - run: vendor/bin/phpunit --fail-on-skipped
 
   static:

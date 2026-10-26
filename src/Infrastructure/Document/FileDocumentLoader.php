@@ -39,9 +39,9 @@ final class FileDocumentLoader implements DocumentLoader
     private function json(string $path, string $content): mixed
     {
         try {
-            return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+            return json_decode($content, true, flags: JSON_THROW_ON_ERROR);
         } catch (JsonException $exception) {
-            throw new DocumentNotLoaded($path . ' is not valid JSON: ' . $exception->getMessage(), 0, $exception);
+            throw new DocumentNotLoaded($path . ' is not valid JSON: ' . $exception->getMessage(), $exception->getCode(), previous: $exception);
         }
     }
 
@@ -50,7 +50,7 @@ final class FileDocumentLoader implements DocumentLoader
         try {
             return Yaml::parse($content, Yaml::PARSE_EXCEPTION_ON_INVALID_TYPE);
         } catch (ParseException $exception) {
-            throw new DocumentNotLoaded($path . ' is not valid YAML: ' . $exception->getMessage(), 0, $exception);
+            throw new DocumentNotLoaded($path . ' is not valid YAML: ' . $exception->getMessage(), $exception->getCode(), previous: $exception);
         }
     }
 }

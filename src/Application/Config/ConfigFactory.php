@@ -163,7 +163,9 @@ final class ConfigFactory
     {
         $paths = [];
         $section = $root->section('paths');
-        foreach ($root->stringMap('paths') as $prefix => $path) {
+        foreach ($root->stringMap('paths') as $key => $path) {
+            // PHP turns a numeric key like "1" into an int.
+            $prefix = (string) $key;
             if (!str_ends_with($prefix, '\\')) {
                 $section->report(sprintf('A namespace prefix ends with "\"; write "%s\".', $prefix), $prefix);
 
