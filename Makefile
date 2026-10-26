@@ -19,7 +19,7 @@ bc-check: ## Compare the public API with the latest release tag (Roave)
 	$(TOOLS)/roave-backward-compatibility-check --from=$$base --install-development-dependencies --no-interaction
 
 lint-81: ## Lint sources with the PHP 8.1 parser
-	$(PHP81) sh -c "find src tests -name '*.php' -print0 | xargs -0 -r -n1 php -l > /dev/null"
+	$(PHP81) sh -c "find src tests -name '*.php' -not -path 'tests/Fixtures/Projects/Scan/Syntax.php' -print0 | xargs -0 -r -n1 php -l > /dev/null"
 
 test: ## Run the tests on the local PHP
 	vendor/bin/phpunit

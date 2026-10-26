@@ -30,6 +30,8 @@ return RectorConfig::configure()
     ->withSkip([
         // Deliberately broken fixtures: the generator must report them.
         __DIR__ . '/tests/Fixtures/Model/Broken.php',
+        __DIR__ . '/tests/Fixtures/Projects/Scan/Syntax.php',
+        __DIR__ . '/tests/Fixtures/Projects/Scan/Unloadable.php',
         NewlineAfterStatementRector::class,
         CatchExceptionNameMatchingTypeRector::class,
     ])

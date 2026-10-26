@@ -16,6 +16,7 @@ parameters:
     excludePaths:
         analyseAndScan:
             - tests/Fixtures/Model/Broken.php
+            - tests/Fixtures/Projects/Scan/
     disallowedFunctionCalls:
         -
             function:
