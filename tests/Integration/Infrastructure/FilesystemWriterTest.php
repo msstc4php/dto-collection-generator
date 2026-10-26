@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Integration\Infrastructure;
 
 use LogicException;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\ChangeKind;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\FileChange;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\WriteFailed;
+use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Filesystem\FileIdentity;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Writer\FilesystemWriter;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\TestCase;
@@ -352,6 +354,62 @@ final class FilesystemWriterTest extends TestCase
         );
     }
 
+    public function testUnknownIdentitiesStillSeeASymlinkedSpelling(): void
+    {
+        $writer = new FilesystemWriter(static fn (string $path): ?string => null);
+        $old = [$this->file('src/X.php', 'x')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        symlink($this->directory->path . '/src', $this->directory->path . '/lib');
+        $new = [$this->file('lib/X.php', 'x')];
+
+        $plan = $writer->plan($this->manifest, $new);
+        self::assertSame([['unchanged', 'lib/X.php']], $this->changes($plan));
+        $writer->apply($plan, $this->manifest, $new);
+        self::assertFileExists($this->directory->path . '/lib/X.php');
+    }
+
+    public function testOurStaleFileOutsideTheScopeIsReported(): void
+    {
+        $outside = new TemporaryDirectory();
+        $writer = new FilesystemWriter();
+        $old = [
+            new GeneratedFile($outside->path . '/Old/A.php', self::HEADER . 'a'),
+            new GeneratedFile($outside->path . '/Old/B.php', self::HEADER . 'b'),
+            new GeneratedFile($outside->path . '/Old/OrderList.php', self::HEADER . 'o'),
+        ];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+        // A PHP file without our header is not worth a word, wherever it is.
+        file_put_contents($outside->path . '/Old/B.php', "<?php\n");
+
+        try {
+            // A move into a parent directory deletes as usual (testStaleFilesBelowWrittenDirectoriesAreDeleted); a
+            // sibling directory outside the config's is out of reach.
+            $plan = $writer->plan($this->manifest, [new GeneratedFile($outside->path . '/New/OrderList.php', self::HEADER . 'o')]);
+            self::assertSame(
+                [['create', '/New/OrderList.php'], ['abandoned', '/Old/A.php'], ['abandoned', '/Old/OrderList.php']],
+                array_map(static fn (FileChange $change): array => [$change->kind->value, substr($change->path, strlen($outside->path))], $plan->changes),
+            );
+            self::assertSame('it was generated earlier and its spec is gone, but it lies outside the directories this run writes into, so it was left alone', $plan->changes[1]->reason);
+        } finally {
+            $outside->remove();
+        }
+    }
+
+    public function testStaleFilesBelowWrittenDirectoriesAreDeleted(): void
+    {
+        $outside = new TemporaryDirectory();
+        $writer = new FilesystemWriter();
+        $old = [new GeneratedFile($outside->path . '/Order/OrderList.php', self::HEADER . 'o')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+
+        try {
+            $plan = $writer->plan($this->manifest, [new GeneratedFile($outside->path . '/OrderList.php', self::HEADER . 'o')]);
+            self::assertSame([ChangeKind::Create, ChangeKind::Delete], array_map(static fn (FileChange $change): ChangeKind => $change->kind, $plan->changes));
+        } finally {
+            $outside->remove();
+        }
+    }
+
     public function testTheSameInodeOnAnotherDeviceIsAnotherFile(): void
     {
         $identity = fn (string $path): string => (str_contains($path, '/stale/') ? 'a' : 'b') . ':42';
@@ -364,9 +422,9 @@ final class FilesystemWriterTest extends TestCase
 
     public function testInodeZeroIsUnknown(): void
     {
-        self::assertNull(FilesystemWriter::identity(['dev' => 7, 'ino' => 0]));
-        self::assertNull(FilesystemWriter::identity(false));
-        self::assertSame('7:42', FilesystemWriter::identity(['dev' => 7, 'ino' => 42]));
+        self::assertNull(FileIdentity::fromStat(['dev' => 7, 'ino' => 0]));
+        self::assertNull(FileIdentity::fromStat(false));
+        self::assertSame('7:42', FileIdentity::fromStat(['dev' => 7, 'ino' => 42]));
     }
 
     public function testStaleFilesOutsideTheProjectAreNotDeleted(): void
@@ -377,8 +435,9 @@ final class FilesystemWriterTest extends TestCase
         file_put_contents($this->manifest, json_encode(['files' => [$planted => hash('sha256', self::HEADER . 'x')]], JSON_THROW_ON_ERROR));
 
         try {
-            // Neither inside the config's directory nor where this run writes: a planted entry, dropped silently.
-            self::assertSame([['create', 'src/ItemList.php']], $this->changes($writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')])));
+            // Neither inside the config's directory nor where this run writes: never deleted, only reported.
+            $plan = $writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')]);
+            self::assertSame([ChangeKind::Create, ChangeKind::Abandoned], array_map(static fn (FileChange $change): ChangeKind => $change->kind, $plan->changes));
             $writer->apply($writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')]), $this->manifest, [$this->file('src/ItemList.php', 'one')]);
             self::assertFileExists($planted);
         } finally {

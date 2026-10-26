@@ -86,7 +86,8 @@ An ODM element class without an ODM document attribute is a warning: it may be m
   generate) or differs from what a run would write. Its paths are
   relative to the config, so it means the same on every machine.
 - A generated file whose spec is gone is deleted, but only inside the config's directory or a
-  directory this run writes into (the manifest is not trusted), and unless it was edited after generation (then it
+  directory this run writes into, or below them (the manifest is not trusted); elsewhere it is
+  left alone with a warning. It is not deleted either when it was edited after generation (then it
   is a conflict) or no longer starts with the generated header (then it is left alone with a
   warning).
 - Renaming a collection only in letter case (`ItemList` → `Itemlist`) keeps the file on a

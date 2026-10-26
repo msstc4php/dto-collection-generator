@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Support;
 
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\ClassInspector;
+use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
 
 /**
@@ -60,6 +61,11 @@ final class InMemoryClassInspector implements ClassInspector
     public function fileOf(string $class): ?string
     {
         return $this->find($class)['file'] ?? null;
+    }
+
+    public function isSameFile(string $left, string $right): bool
+    {
+        return strtolower(Path::normalize($left)) === strtolower(Path::normalize($right));
     }
 
     public function locate(string $class): ?string

@@ -147,6 +147,11 @@ final class SpecValidatorTest extends TestCase
             {
                 return $this->inner->locate($class);
             }
+
+            public function isSameFile(string $left, string $right): bool
+            {
+                return $this->inner->isSameFile($left, $right);
+            }
         };
         $spec = self::spec('App\Stale', ElementType::ofClass(Item::class));
         $diagnostics = new Diagnostics();

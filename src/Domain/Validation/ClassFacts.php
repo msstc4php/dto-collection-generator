@@ -38,4 +38,6 @@ interface ClassFacts
      * The file the autoloader would load for the class, found without loading it.
      */
     public function locate(string $class): ?string;
+
+    public function isSameFile(string $left, string $right): bool;
 }

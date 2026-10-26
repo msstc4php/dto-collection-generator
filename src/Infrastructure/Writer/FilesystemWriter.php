@@ -14,6 +14,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\WritePlan;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\FileWriter;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\WriteFailed;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Shared\Path;
+use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Filesystem\FileIdentity;
 
 /**
  * Writes generated files atomically and remembers them in a manifest, so a file whose spec is gone can be deleted
@@ -37,20 +38,7 @@ final class FilesystemWriter implements FileWriter
      */
     public function __construct(?Closure $identity = null)
     {
-        $this->identity = $identity ?? static fn (string $path): ?string => self::identity(@stat($path));
-    }
-
-    /**
-     * @param array{dev: int, ino: int}|false $stat as stat() returns it
-     */
-    public static function identity(array|false $stat): ?string
-    {
-        // Some file systems and builds report inode 0 for every file: no identity then.
-        if ($stat === false || $stat['ino'] === 0) {
-            return null;
-        }
-
-        return $stat['dev'] . ':' . $stat['ino'];
+        $this->identity = $identity ?? FileIdentity::of(...);
     }
 
     public function plan(string $manifestPath, array $files): WritePlan
@@ -83,7 +71,15 @@ final class FilesystemWriter implements FileWriter
         // $old is sorted by path, so the deletions come in a stable order.
         foreach ($old as $path => $hash) {
             $current = is_file($path) ? file_get_contents($path) : false;
-            if ($current === false || !$this->isInside($path, $scopes) || $this->isWrittenNow($path, $written, $paths)) {
+            if ($current === false || $this->isWrittenNow($path, $written, $files)) {
+                continue;
+            }
+            if (!$this->isInside($path, $scopes)) {
+                // Only our own file is worth a word: a planted entry must not point the user at an arbitrary one.
+                if (preg_match(self::GENERATED, $current) === 1 && str_ends_with($path, '.php')) {
+                    $changes[] = new FileChange(ChangeKind::Abandoned, $path, 'it was generated earlier and its spec is gone, but it lies outside the directories this run writes into, so it was left alone');
+                }
+
                 continue;
             }
             // Only our own generated files are deleted; a PHP file that lost the header earns a warning.
@@ -240,17 +236,24 @@ final class FilesystemWriter implements FileWriter
 
     /**
      * @param list<?string> $written identities of this run's files; null for those that do not exist yet
-     * @param array<string, string> $paths lower-case path => path of this run's files
+     * @param list<GeneratedFile> $files
      */
-    private function isWrittenNow(string $path, array $written, array $paths): bool
+    private function isWrittenNow(string $path, array $written, array $files): bool
     {
         $identity = ($this->identity)($path);
         if ($identity !== null) {
             return in_array($identity, $written, true);
         }
 
-        // Unknown identity: the same path in another letter case may be the same file on this file system.
-        return isset($paths[strtolower($path)]);
+        // Unknown identity: compare real paths regardless of letter case, which may be the same file here.
+        $spelling = FileIdentity::spelling($path);
+        foreach ($files as $file) {
+            if (FileIdentity::spelling($file->path) === $spelling) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function write(string $path, string $contents): void

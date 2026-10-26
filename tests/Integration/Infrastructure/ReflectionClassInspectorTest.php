@@ -88,6 +88,28 @@ final class ReflectionClassInspectorTest extends TestCase
         }
     }
 
+    public function testSameFile(): void
+    {
+        $directory = new TemporaryDirectory();
+        $a = $directory->write('src/A.php', 'a');
+        $b = $directory->write('src/B.php', 'b');
+        link($a, $directory->path . '/src/Alias.php');
+        symlink($directory->path . '/src', $directory->path . '/lib');
+        $inspector = new ReflectionClassInspector();
+
+        try {
+            // On macOS realpath() keeps the letter case it is given, so only the inode tells "Src/A.php" is "src/A.php".
+            self::assertTrue($inspector->isSameFile($a, $directory->path . '/src/Alias.php'));
+            self::assertTrue($inspector->isSameFile($a, $directory->path . '/lib/A.php'));
+            self::assertFalse($inspector->isSameFile($a, $b));
+            self::assertTrue($inspector->isSameFile($directory->path . '/missing.php', $directory->path . '/lib/../missing.php'));
+            self::assertFalse($inspector->isSameFile($directory->path . '/missing.php', $directory->path . '/other.php'));
+        } finally {
+            unlink($directory->path . '/lib');
+            $directory->remove();
+        }
+    }
+
     public function testFiles(): void
     {
         $inspector = new ReflectionClassInspector();

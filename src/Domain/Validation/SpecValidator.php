@@ -83,7 +83,7 @@ final class SpecValidator
     private function checkDeclaredElsewhere(CollectionSpec $spec, string $target, ClassFacts $facts, Diagnostics $problems): void
     {
         $located = $facts->locate($spec->class->fullName());
-        if ($located !== null && Path::normalize($located) !== Path::normalize($target)) {
+        if ($located !== null && !$facts->isSameFile($located, $target)) {
             $problems->error(sprintf(
                 '%s is also declared in %s, which the autoloader would load instead of the generated %s; remove one of them',
                 $spec->class->fullName(),

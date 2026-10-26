@@ -10,6 +10,7 @@ use Doctrine\ODM\MongoDB\Mapping\Annotations\AbstractDocument;
 use MSSTC4PHP\DtoCollection\Equatable;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\ClassInspector;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
+use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Filesystem\FileIdentity;
 use ReflectionAttribute;
 use ReflectionClass;
 use Throwable;
@@ -63,6 +64,11 @@ final class ReflectionClassInspector implements ClassInspector
         $file = $this->reflect($class)?->getFileName();
 
         return $file === false ? null : $file;
+    }
+
+    public function isSameFile(string $left, string $right): bool
+    {
+        return FileIdentity::same($left, $right);
     }
 
     public function locate(string $class): ?string
