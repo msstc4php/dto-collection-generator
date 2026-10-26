@@ -9,7 +9,7 @@ First release.
 ### Added
 
 - Generation of immutable, mutable and Doctrine MongoDB ODM collection classes over
-  `msstc4php/dto-collection` 1.x, from `#[TypedCollection]` attributes and from
+  `msstc4php/dto-collection` 1.1+, from `#[TypedCollection]` attributes and from
   `dto-collection-generator.yaml`.
 - Target PHP 8.1–8.5: `#[\Override]` from 8.3, intersection element types from 8.2.
 - Checks of every spec before anything is written; all problems of a run are reported at once.

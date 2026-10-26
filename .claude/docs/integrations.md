@@ -1,7 +1,7 @@
 # Integrations
 
-- **dto-collection** (`^1.0`): installed from the path repository `../dto-collection` with
-  `versions: {msstc4php/dto-collection: 1.0.0}` and `symlink: false` (a mirror copy, including
+- **dto-collection** (`^1.1`, for `ElementType::andInstanceOf()`): installed from the path repository `../dto-collection` with
+  `versions: {msstc4php/dto-collection: 1.1.0}` and `symlink: false` (a mirror copy, including
   its own vendor/ — harmless). Its `php` constraint is `>=8.1 <8.5`.
 - **php-parser 5**: only for finding candidate classes (`createForNewestSupportedVersion()`,
   `NameResolver`). Files without the text `TypedCollection` are not parsed.

@@ -4,10 +4,10 @@
   Switch to a `vcs` repository or Packagist once dto-collection is published.
 - **8.5 is lint-only in `make test-targets`**: dto-collection 1.x declares `php <8.5`. The 8.5
   output equals 8.4's; widen the constraint to `^1.0 || ^2.0` when 2.x exists.
-- **`ElementType::intersection()` is typed `ElementType<object>`**, so the generated
-  `elementType()` of an intersection collection carries a `@phpstan-ignore return.type,
-  assign.propertyType`. Fix it in dto-collection first, then drop the ignore here (it would turn
-  into an unmatched ignore).
+- **An intersection is emitted as `ElementType::ofClass(A::class)->andInstanceOf(B::class)`**,
+  not `ElementType::intersection(A::class, B::class)`: the latter is PHPDoc-typed
+  `ElementType<object>` and would need a `@phpstan-ignore` in every generated class. Hence
+  dto-collection `^1.1`.
 - **Generic interfaces in an element type** (`Traversable`, `IteratorAggregate`) make PHPStan max
   report missing type arguments in the generated class; a spec cannot carry them. The golden
   intersection uses `Animal&Equatable` for that reason.
