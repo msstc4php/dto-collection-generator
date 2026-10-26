@@ -6,6 +6,7 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Application\Generate;
 
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Config\GeneratorConfig;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\ChangeKind;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Generate;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\GeneratedFile;
@@ -14,6 +15,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Mode;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Output;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Generate\Status;
 use MSSTC4PHP\DtoCollectionGenerator\Application\Port\PhpRequirement;
+use MSSTC4PHP\DtoCollectionGenerator\Application\Port\ProjectLayout;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Diagnostic;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Diagnostic\Location;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
@@ -28,6 +30,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\InMemoryDocumentLoader;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\InMemorySpecSource;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\RecordingEmitter;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\RecordingWriter;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\TestCase;
 
 final class GenerateTest extends TestCase
@@ -186,6 +189,42 @@ final class GenerateTest extends TestCase
 
         self::assertSame(Status::GenerationFailed, $output->status);
         self::assertSame(['error /project/src/Item.php:5: App\Existing already exists in /project/src/Existing.php, which dto-collection-generator did not write; choose another class name'], $this->messages($output));
+    }
+
+    public function testOurOutputSeenThroughASymlinkIsNotASecondDeclaration(): void
+    {
+        $directory = new TemporaryDirectory();
+        $real = $directory->write('real/Generated.php', "<?php\n");
+        symlink($directory->path . '/real', $directory->path . '/link');
+        $layout = new class($directory->path . '/link/Generated.php') implements ProjectLayout {
+            public function __construct(private readonly string $path)
+            {
+            }
+
+            public function pathFor(ClassName $class, GeneratorConfig $config): string
+            {
+                return $this->path;
+            }
+        };
+        $generate = new Generate(
+            new InMemoryDocumentLoader([self::CONFIG => ['version' => 1]]),
+            new FixedPhpConstraint(PhpRequirement::found('/project/composer.json', '^8.2')),
+            new InMemorySpecSource([$this->spec('App\Generated')]),
+            new InMemoryClassInspector([Item::class => ['kind' => ClassKind::OrdinaryClass], 'App\Generated' => ['kind' => ClassKind::OrdinaryClass, 'located' => (string) realpath($real)]]),
+            $this->emitter,
+            $layout,
+            $this->writer,
+        );
+
+        try {
+            $output = $generate(new Input(self::CONFIG, Mode::DryRun));
+        } finally {
+            unlink($directory->path . '/link');
+            $directory->remove();
+        }
+
+        self::assertSame([], $this->messages($output));
+        self::assertSame(Status::Ok, $output->status);
     }
 
     public function testExitCodes(): void

@@ -21,6 +21,8 @@ First release.
 - An ODM collection takes a single class or interface as its element type (Doctrine ODM's
   persistent-collection generator cannot print a union return type), and every collection needs a
   namespace.
-- `--check` and `--dry-run` list the manifest when it would change; commit the manifest.
+- `--check` and `--dry-run` list the manifest when it would change; commit the manifest. A manifest
+  written by an earlier development build (absolute paths) fails `--check` once: run the generator
+  and commit the rewritten manifest.
 - A stale file that no longer starts with the generated header is left alone with a warning
   (`abandoned` in the JSON report).

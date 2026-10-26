@@ -8,7 +8,7 @@ final class WritePlan
 {
     /**
      * @param list<FileChange> $changes
-     * @param bool $manifestOutdated whether the manifest lists files other than the ones this run generates
+     * @param bool $manifestOutdated whether the manifest file differs (line endings aside) from what this run would write
      */
     public function __construct(public readonly array $changes, public readonly bool $manifestOutdated)
     {

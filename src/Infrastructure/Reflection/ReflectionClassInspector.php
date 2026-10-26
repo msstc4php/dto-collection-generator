@@ -67,10 +67,15 @@ final class ReflectionClassInspector implements ClassInspector
 
     public function locate(string $class): ?string
     {
+        // Composer lists a prepended loader first, which is also the order spl_autoload asks them in. Other
+        // autoloaders cannot be asked without loading the class.
         foreach (ClassLoader::getRegisteredLoaders() as $loader) {
             $file = $loader->findFile($class);
             if (is_string($file)) {
-                return $file;
+                // Real paths, so a symlinked vendor/ or project directory names the same file the same way.
+                $real = realpath($file);
+
+                return $real === false ? $file : $real;
             }
         }
 

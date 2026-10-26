@@ -103,7 +103,13 @@ final class Generate
             function (ClassName $class) use ($config): ?string {
                 $path = $this->layout->pathFor($class, $config);
 
-                return $path !== null && $this->writer->isGenerated($path) ? $path : null;
+                if ($path === null || !$this->writer->isGenerated($path)) {
+                    return null;
+                }
+                // Compared with the autoloader's real path: a symlinked directory must not look like a second file.
+                $real = realpath($path);
+
+                return $real === false ? $path : $real;
             },
         );
         if ($diagnostics->hasErrors()) {

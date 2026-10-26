@@ -22,12 +22,17 @@
 - **Loading the previous output can be fatal**: a generated class for an older dto-collection may fail
   to link (missing abstract method) — uncatchable. The validator skips the "already exists" check when
   the target file starts with our header, so such a class is never loaded.
-- **Case-only renames on macOS/Windows**: the stale scan skips any manifest entry whose inode is a file written in
-  this run (covers Unicode case folding and symlinked spellings; tested with hard links on Linux). The file may keep
+- **Case-only renames on macOS/Windows**: the stale scan skips any manifest entry whose identity ("dev:ino" from
+  stat) is a file written in this run (covers Unicode case folding and symlinked spellings; tested with hard links on
+  Linux). Inode 0 means unknown (some file systems, older PHP on Windows): then an entry differing from a written
+  path only in ASCII case is kept instead. Stale entries count only inside the config directory or a directory the run
+  writes into. The file may keep
   its old spelling on disk — documented (`git mv`), not fixed.
 - **The manifest is compared byte for byte** with what `writeManifest` would write (CRLF ignored), so an old
   absolute or reordered manifest is "outdated" once and rewritten.
-- **Abandoned warnings only for `.php` files inside the config directory**: other stale entries of an untrusted
+- **Composer's loaders come in autoload order**: `register(true)` prepends to `ClassLoader::getRegisteredLoaders()`;
+  `locate()` and the generated target are compared by `realpath()`.
+- **Abandoned warnings only for `.php` files in scope**: other stale entries of an untrusted
   manifest are dropped silently, so a planted manifest cannot point the user at an arbitrary file.
 - **Manifest paths are relative to the config, with `../`** (`Path::relative()`); absolute only across
   drives or UNC shares.

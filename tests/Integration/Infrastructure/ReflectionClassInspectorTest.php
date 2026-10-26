@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Integration\Infrastructure;
 
+use Composer\Autoload\ClassLoader;
 use Countable;
 use MSSTC4PHP\DtoCollectionGenerator\Domain\Spec\ClassKind;
 use MSSTC4PHP\DtoCollectionGenerator\Infrastructure\Reflection\ReflectionClassInspector;
@@ -17,6 +18,7 @@ use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Labelled;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\NeverLoaded;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Pet;
 use MSSTC4PHP\DtoCollectionGenerator\Tests\Fixtures\Model\Tag;
+use MSSTC4PHP\DtoCollectionGenerator\Tests\Support\TemporaryDirectory;
 use PHPUnit\Framework\TestCase;
 
 final class ReflectionClassInspectorTest extends TestCase
@@ -65,6 +67,25 @@ final class ReflectionClassInspectorTest extends TestCase
         self::assertSame(dirname(__DIR__, 2) . '/Fixtures/Model/NeverLoaded.php', realpath((string) $inspector->locate($class)));
         self::assertFalse(class_exists($class, false));
         self::assertNull($inspector->locate('Nope\Missing'));
+    }
+
+    public function testLocatesAsTheAutoloaderWould(): void
+    {
+        $directory = new TemporaryDirectory();
+        $directory->write('real/NeverLoaded.php', "<?php\n");
+        symlink($directory->path . '/real', $directory->path . '/link');
+        $loader = new ClassLoader($directory->path . '/vendor');
+        $loader->addPsr4('MSSTC4PHP\\DtoCollectionGenerator\\Tests\\Fixtures\\Model\\', $directory->path . '/link');
+        // Registered last and prepended, as Composer does: spl_autoload asks it first.
+        $loader->register(true);
+
+        try {
+            self::assertSame(realpath($directory->path . '/real/NeverLoaded.php'), (new ReflectionClassInspector())->locate(NeverLoaded::class));
+        } finally {
+            $loader->unregister();
+            unlink($directory->path . '/link');
+            $directory->remove();
+        }
     }
 
     public function testFiles(): void

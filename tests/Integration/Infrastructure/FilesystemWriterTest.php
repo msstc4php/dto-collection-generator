@@ -334,6 +334,58 @@ final class FilesystemWriterTest extends TestCase
         self::assertSame([], (new FilesystemWriter())->plan($this->manifest, [])->changes);
     }
 
+    public function testNoManifestAndNothingToGenerateIsUpToDate(): void
+    {
+        self::assertTrue((new FilesystemWriter())->plan($this->manifest, [])->isUpToDate());
+    }
+
+    public function testUnknownFileIdentitiesFallBackToThePathsLetterCase(): void
+    {
+        $writer = new FilesystemWriter(static fn (string $path): ?string => null);
+        $old = [$this->file('src/ItemList.php', 'one'), $this->file('src/Other.php', 'two')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+
+        // Without identities, an entry that differs from a written path only in case may be that very file: kept.
+        self::assertSame(
+            [['create', 'src/Itemlist.php'], ['delete', 'src/Other.php']],
+            $this->changes($writer->plan($this->manifest, [$this->file('src/Itemlist.php', 'new')])),
+        );
+    }
+
+    public function testTheSameInodeOnAnotherDeviceIsAnotherFile(): void
+    {
+        $identity = fn (string $path): string => (str_contains($path, '/stale/') ? 'a' : 'b') . ':42';
+        $writer = new FilesystemWriter($identity);
+        $old = [$this->file('stale/ItemList.php', 'one')];
+        $writer->apply($writer->plan($this->manifest, $old), $this->manifest, $old);
+
+        self::assertSame([['create', 'fresh/TagList.php'], ['delete', 'stale/ItemList.php']], $this->changes($writer->plan($this->manifest, [$this->file('fresh/TagList.php', 'two')])));
+    }
+
+    public function testInodeZeroIsUnknown(): void
+    {
+        self::assertNull(FilesystemWriter::identity(['dev' => 7, 'ino' => 0]));
+        self::assertNull(FilesystemWriter::identity(false));
+        self::assertSame('7:42', FilesystemWriter::identity(['dev' => 7, 'ino' => 42]));
+    }
+
+    public function testStaleFilesOutsideTheProjectAreNotDeleted(): void
+    {
+        $outside = new TemporaryDirectory();
+        $writer = new FilesystemWriter();
+        $planted = $outside->write('src/X.php', self::HEADER . 'x');
+        file_put_contents($this->manifest, json_encode(['files' => [$planted => hash('sha256', self::HEADER . 'x')]], JSON_THROW_ON_ERROR));
+
+        try {
+            // Neither inside the config's directory nor where this run writes: a planted entry, dropped silently.
+            self::assertSame([['create', 'src/ItemList.php']], $this->changes($writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')])));
+            $writer->apply($writer->plan($this->manifest, [$this->file('src/ItemList.php', 'one')]), $this->manifest, [$this->file('src/ItemList.php', 'one')]);
+            self::assertFileExists($planted);
+        } finally {
+            $outside->remove();
+        }
+    }
+
     public function testAManifestThatWouldBeWrittenDifferentlyIsOutdated(): void
     {
         $writer = new FilesystemWriter();
