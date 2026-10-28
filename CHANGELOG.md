@@ -4,7 +4,7 @@ All notable changes to this package are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), versions follow
 [Semantic Versioning](https://semver.org/); dates are UTC.
 
-## [Unreleased]
+## [1.0.0] - 2026-10-28
 
 First release.
 
@@ -28,3 +28,5 @@ First release.
   and commit the rewritten manifest.
 - A stale file that no longer starts with the generated header is left alone with a warning
   (`abandoned` in the JSON report).
+
+[1.0.0]: https://github.com/msstc4php/dto-collection-generator/releases/tag/v1.0.0
