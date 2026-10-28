@@ -48,3 +48,5 @@
   PHPStan and Rector see `Ds\Vector` even without ext-ds (CI does not: name such classes as
   strings, Rector skip in `rector.php`); and the local platform pin (8.1) installs symfony/console
   ≤7, while CI on PHP 8.4 gets 8, which has no `Application::add()` — use a command loader.
+- **The PHP-CS-Fixer cache can hide a finding** that CI (no cache) reports; before pushing, run
+  `tools/vendor/bin/php-cs-fixer check --using-cache=no`.

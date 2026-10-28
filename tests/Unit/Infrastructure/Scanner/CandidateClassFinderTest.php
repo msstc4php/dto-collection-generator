@@ -14,14 +14,14 @@ final class CandidateClassFinderTest extends TestCase
         $code = <<<'PHP_WRAP'
             <?php
             namespace App;
-        
+
             use MSSTC4PHP\DtoCollection\Attribute\TypedCollection;
-        
+
             #[TypedCollection(class: 'App\FirstList')]
             final class First {}
-        
+
             final class Unmarked {}
-        
+
             #[\Other\Attribute, TypedCollection(class: 'App\SecondList')]
             #[TypedCollection(class: 'App\ThirdList')]
             enum Second {}
