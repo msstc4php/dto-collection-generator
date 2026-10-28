@@ -13,14 +13,8 @@
     "prefer-stable": true,
     "repositories": [
         {
-            "type": "path",
-            "url": "../dto-collection",
-            "options": {
-                "symlink": false,
-                "versions": {
-                    "msstc4php/dto-collection": "1.1.0"
-                }
-            }
+            "type": "vcs",
+            "url": "https://github.com/msstc4php/dto-collection"
         }
     ],
     "require": {

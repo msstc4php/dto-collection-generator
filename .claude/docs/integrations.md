@@ -1,8 +1,7 @@
 # Integrations
 
-- **dto-collection** (`^1.1`, for `ElementType::andInstanceOf()`): installed from the path repository `../dto-collection` with
-  `versions: {msstc4php/dto-collection: 1.1.0}` and `symlink: false` (a mirror copy, including
-  its own vendor/ — harmless). Its `php` constraint is `>=8.1 <8.5`.
+- **dto-collection** (`^1.1`, for `ElementType::andInstanceOf()`): installed from the `vcs` repository
+  `https://github.com/msstc4php/dto-collection` (tags v1.0.0, v1.1.0; default branch `1.x`). Its `php` constraint is `>=8.1 <8.5`.
 - **php-parser 5**: only for finding candidate classes (`createForNewestSupportedVersion()`,
   `NameResolver`). Files without the text `TypedCollection` are not parsed.
 - **Reflection / autoloading**: the generator runs in the project's process and loads the found
