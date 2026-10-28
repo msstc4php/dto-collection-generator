@@ -14,6 +14,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\CommandLoader\FactoryCommandLoader;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -43,17 +44,20 @@ final class DtoCollectionGeneratorTest extends TestCase
     public function testAnUnexpectedFailureExitsWithTwo(): void
     {
         $application = new Application();
-        $application->add(new class extends Command {
-            public function __construct()
-            {
-                parent::__construct('explode');
-            }
+        // symfony/console 8 has no add(); a command loader works on every supported major.
+        $application->setCommandLoader(new FactoryCommandLoader([
+            'explode' => static fn (): Command => new class extends Command {
+                public function __construct()
+                {
+                    parent::__construct('explode');
+                }
 
-            protected function execute(InputInterface $input, OutputInterface $output): int
-            {
-                throw new RuntimeException('Boom');
-            }
-        });
+                protected function execute(InputInterface $input, OutputInterface $output): int
+                {
+                    throw new RuntimeException('Boom');
+                }
+            },
+        ]));
         $output = new BufferedOutput();
         self::assertSame(2, DtoCollectionGenerator::run(new ArrayInput(['command' => 'explode']), $output, $application));
         self::assertSame("error: Boom\n", $output->fetch());

@@ -6,7 +6,6 @@ namespace MSSTC4PHP\DtoCollectionGenerator\Tests\Unit\Domain\Validation;
 
 use ArrayObject;
 use Closure;
-use Ds\Vector;
 use MSSTC4PHP\DtoCollection\Attribute\Variant;
 use MSSTC4PHP\DtoCollection\ElementType;
 use MSSTC4PHP\DtoCollection\Equatable;
@@ -49,7 +48,8 @@ final class SpecValidatorTest extends TestCase
             Tag::class => ['kind' => ClassKind::OrdinaryClass],
             'App\Existing' => ['kind' => ClassKind::OrdinaryClass, 'file' => '/project/src/Existing.php'],
             'App\Generated' => ['kind' => ClassKind::OrdinaryClass, 'file' => '/project/src/Generated.php'],
-            Vector::class => ['kind' => ClassKind::OrdinaryClass],
+            // ext-ds need not be installed: the inspector is in memory.
+            'Ds\Vector' => ['kind' => ClassKind::OrdinaryClass],
         ]);
     }
 
@@ -89,7 +89,7 @@ final class SpecValidatorTest extends TestCase
     {
         $diagnostics = new Diagnostics();
 
-        self::assertSame([], $this->validate([$this->spec(Vector::class, ElementType::ofClass(Item::class))], $diagnostics));
+        self::assertSame([], $this->validate([$this->spec('Ds\Vector', ElementType::ofClass(Item::class))], $diagnostics));
         self::assertSame(['error 1: Ds\Vector already exists, built into PHP or an extension; choose another class name'], $this->messages($diagnostics));
     }
 
