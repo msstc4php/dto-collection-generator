@@ -44,3 +44,7 @@
   scratchpad, not `$TMPDIR/check.log`.
 - **Rector rewrites strings to `::class`** in tests (`'\Foo\Bar'` → `Bar::class`, losing the
   leading backslash): write `'\\' . Bar::class` when the backslash matters.
+- **Local tools hide two CI-only failures**: `tools/vendor` carries PhpStorm's stubs, so locally
+  PHPStan and Rector see `Ds\Vector` even without ext-ds (CI does not: name such classes as
+  strings, Rector skip in `rector.php`); and the local platform pin (8.1) installs symfony/console
+  ≤7, while CI on PHP 8.4 gets 8, which has no `Application::add()` — use a command loader.

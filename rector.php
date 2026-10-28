@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Rector\CodingStyle\Rector\Catch_\CatchExceptionNameMatchingTypeRector;
 use Rector\CodingStyle\Rector\Stmt\NewlineAfterStatementRector;
 use Rector\Config\RectorConfig;
+use Rector\Php55\Rector\String_\StringClassNameToClassConstantRector;
 use Rector\ValueObject\PhpVersion;
 
 return RectorConfig::configure()
@@ -36,5 +37,7 @@ return RectorConfig::configure()
         __DIR__ . '/tests/Targets',
         NewlineAfterStatementRector::class,
         CatchExceptionNameMatchingTypeRector::class,
+        // Ds\Vector exists only where ext-ds (or PhpStorm's stubs in tools/) is loaded; the test names it as a string.
+        StringClassNameToClassConstantRector::class => [__DIR__ . '/tests/Unit/Domain/Validation/SpecValidatorTest.php'],
     ])
 ;
