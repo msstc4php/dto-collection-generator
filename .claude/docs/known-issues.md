@@ -1,7 +1,8 @@
 # Known issues and traps
 
-- **CI cannot install dto-collection yet**: `composer.json` takes it from `../dto-collection`.
-  Switch to a `vcs` repository or Packagist once dto-collection is published.
+- **dto-collection comes from a `vcs` repository** (`github.com/msstc4php/dto-collection`) until it
+  is on Packagist; then drop `repositories` from `composer.json`. A change to dto-collection
+  reaches the generator only through a tag there.
 - **8.5 is lint-only in `make test-targets`**: dto-collection 1.x declares `php <8.5`. The 8.5
   output equals 8.4's; widen the constraint to `^1.0 || ^2.0` when 2.x exists.
 - **Generic interfaces in an element type** (`Traversable`, `IteratorAggregate`) make PHPStan max

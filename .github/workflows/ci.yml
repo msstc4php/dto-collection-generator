@@ -1,8 +1,5 @@
 name: CI
 
-# msstc4php/dto-collection is not published yet: composer.json takes it from the path repository ../dto-collection,
-# which a CI checkout does not have. Switch to a vcs repository (or Packagist) once dto-collection is pushed.
-
 on:
   push:
     branches: [main]
