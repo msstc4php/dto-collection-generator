@@ -1,7 +1,14 @@
 # dto-collection-generator
 
+![Build Status](https://github.com/msstc4php/dto-collection-generator/actions/workflows/ci.yml/badge.svg?branch=main)
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.1-787CB5?logo=php&logoColor=white)](https://php.net)
+[![Generated code](https://img.shields.io/badge/generates-PHP%208.1%20%E2%80%93%208.5-787CB5)](docs/configuration.md)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-2a5ea7)](https://phpstan.org)
+[![Last commit](https://img.shields.io/github/last-commit/msstc4php/dto-collection-generator/main)](https://github.com/msstc4php/dto-collection-generator/commits/main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Writes natively typed collection classes over
-[msstc4php/dto-collection](../dto-collection) from `#[TypedCollection]` attributes on your DTOs
+[msstc4php/dto-collection](https://github.com/msstc4php/dto-collection) from `#[TypedCollection]` attributes on your DTOs
 and from a config file. One attribute gives you a class like this, with the element type in
 every signature:
 
@@ -92,8 +99,21 @@ The plugin runs the generator after every autoload dump and only warns on failur
 
 - [docs/configuration.md](docs/configuration.md): every config key, the checks and the exit codes.
 - The shape of the generated classes is dto-collection's
-  [writing-a-typed-collection.md](../dto-collection/docs/writing-a-typed-collection.md).
+  [writing-a-typed-collection.md](https://github.com/msstc4php/dto-collection/blob/1.x/docs/writing-a-typed-collection.md).
+
+## Development
+
+```bash
+make install       # package and tool dependencies
+make verify        # PHPStan, CS-Fixer, Rector, deptrac, PHP 8.1 lint, tests on local PHP and 8.1
+make test-targets  # the golden output on PHP 8.1 … 8.5 in Docker
+make infection     # mutation testing
+```
+
+## Security
+
+See [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT
+MIT, see [LICENSE](LICENSE).

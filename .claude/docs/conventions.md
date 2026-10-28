@@ -17,3 +17,10 @@
   not `ElementType::intersection(A::class, B::class)`: the latter is PHPDoc-typed
   `ElementType<object>` and would need a `@phpstan-ignore` in every generated class. Hence
   dto-collection `^1.1`.
+
+## Repository files follow dto-generator
+
+`SECURITY.md` (with a "what it trusts" section), README badges plus Security/License
+sections, a Keep a Changelog `CHANGELOG.md` with `[x.y.z]` headings and compare links, and
+the CI jobs with the Composer cache steps are kept as in `../dto-generator`. Deliberate
+differences: PHP 8.1 floor, `--prefer-lowest` only on 8.1, ParallelConfig(4), no Docker image.

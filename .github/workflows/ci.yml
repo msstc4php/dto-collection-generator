@@ -5,13 +5,14 @@ name: CI
 
 on:
   push:
-    branches: ['main']
+    branches: [main]
   pull_request:
 
 permissions:
   contents: read
 
 concurrency:
+  # One group per pull request, so a new push cancels its older run; one per commit on main, so each one runs.
   group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
@@ -25,6 +26,8 @@ jobs:
         php: ['8.1', '8.2', '8.3', '8.4']
         dependencies: [highest]
         include:
+          # The dependency floors on the PHP floor, as in dto-collection; on 8.4 the old proxy-manager-lts they pull in is
+          # itself deprecated.
           - php: '8.1'
             dependencies: lowest
     steps:
@@ -34,7 +37,16 @@ jobs:
           php-version: ${{ matrix.php }}
           extensions: mongodb
           coverage: none
+      - name: Locate the Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php }}-${{ matrix.dependencies }}-${{ hashFiles('composer.json') }}
+          restore-keys: composer-${{ matrix.php }}-${{ matrix.dependencies }}-
       - name: Install dependencies
+        # composer.json pins the platform to 8.1 for local installs; CI resolves for the PHP it runs on.
         run: |
           composer config platform --unset
           composer update --no-interaction --no-progress ${{ matrix.dependencies == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
@@ -81,18 +93,29 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # the check reads the previous release from git
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
           extensions: mongodb
           coverage: none
+      - name: Locate the Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-bc-${{ hashFiles('tools/composer.json') }}
+          restore-keys: composer-bc-
       - run: composer install --no-interaction --no-progress --working-dir=tools
+      # The public API is listed in .roave-backward-compatibility-check.xml, compared with the last stable release; an
+      # intended break gets an ignored-regex there in the same change.
       - run: |
           if ! base=$(git describe --tags --abbrev=0 --match 'v[0-9]*' --exclude='*-*' 2>/dev/null); then
             echo "No stable release tag yet: nothing to compare against."
             exit 0
           fi
+          echo "Comparing against ${base}"
           tools/vendor/bin/roave-backward-compatibility-check --from="${base}" --install-development-dependencies --format=github-actions --no-interaction
 
   mutation:
